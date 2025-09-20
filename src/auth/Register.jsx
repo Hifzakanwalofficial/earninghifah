@@ -52,18 +52,19 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
-          Welcome Back
+    <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
+      <h2 className="text-[32px] font-semibold text-center text-gray-800 mb-4">
+          Register
         </h2>
         <p className="text-center text-gray-600 mb-6">
-          Secure access to your fleet anytime, anywhere
+          Create Your Account
         </p>
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+        
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-gray-700">Sign up</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-[24px] text-center robotosemibold text-gray-700">Sign up</h3>
+          <p className="text-[16px] text-gray-500 text-center">
             Provide details to create your account
           </p>
 
@@ -124,7 +125,7 @@ const Register = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-blue-700 text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4"
+              className="w-full bg-[#0078BD] text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4"
               disabled={loading}
             >
               {loading ? "Signing up..." : "Sign up"}

@@ -1,18 +1,18 @@
 import React, { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
-import {
-  FaTachometerAlt,
-  FaWpforms,
-  FaFileAlt,
-  FaCog,
-  FaSignOutAlt
-} from "react-icons/fa";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { FaWpforms, FaSignOutAlt } from "react-icons/fa";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
-import { VscBell } from "react-icons/vsc";
-import { LiaUserCircleSolid } from "react-icons/lia";
+import { RiMoneyDollarCircleLine } from "react-icons/ri";
 
 const Layout = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    setIsOpen(false);
+    navigate('/login');
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -25,7 +25,7 @@ const Layout = () => {
         <h2 className="text-[16px] font-bold mb-6">Driver Panel</h2>
         <nav className="flex flex-col gap-3 flex-1">
           <NavLink
-            to="/driverdashboard"
+            to="/overview"
             className={({ isActive }) =>
               `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
                 isActive
@@ -39,7 +39,7 @@ const Layout = () => {
           </NavLink>
 
           <NavLink
-            to="/overview"
+            to="/driverdashboard"
             className={({ isActive }) =>
               `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
                 isActive
@@ -49,7 +49,7 @@ const Layout = () => {
             }
             onClick={() => setIsOpen(false)}
           >
-            <FaWpforms className="w-5 h-5" /> Trip Inspection
+            <RiMoneyDollarCircleLine className="w-5 h-5" /> Earnings
           </NavLink>
 
           <NavLink
@@ -66,48 +66,13 @@ const Layout = () => {
             <FaWpforms className="w-5 h-5" /> Forms
           </NavLink>
 
-          <NavLink
-            to="/truckdocuments"
-            className={({ isActive }) =>
-              `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
-                isActive
-                  ? "bg-[#0078BD] text-white"
-                  : "text-black hover:bg-gray-100"
-              }`
-            }
-            onClick={() => setIsOpen(false)}
-          >
-            <FaFileAlt className="w-5 h-5" /> Truck Documents
-          </NavLink>
-
           <div className="mt-auto">
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
-                  isActive
-                    ? "bg-[#0078BD] text-white"
-                    : "text-black hover:bg-gray-100"
-                }`
-              }
-              onClick={() => setIsOpen(false)}
-            >
-              <FaCog className="w-5 h-5" /> Settings
-            </NavLink>
-
-            <NavLink
-              to="/logout"
-              className={({ isActive }) =>
-                `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
-                  isActive
-                    ? "bg-[#0078BD] text-white"
-                    : "text-black hover:bg-gray-100"
-                }`
-              }
-              onClick={() => setIsOpen(false)}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium text-black hover:bg-gray-100 w-full text-left"
             >
               <FaSignOutAlt className="w-5 h-5" /> Logout
-            </NavLink>
+            </button>
           </div>
         </nav>
       </aside>
@@ -122,9 +87,6 @@ const Layout = () => {
 
       {/* Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px]">
-        {/* Topbar */}
-     
-
         {/* Main Content */}
         <main className="p-6 flex-1 bg-gray-100">
           <Outlet />

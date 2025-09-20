@@ -1,16 +1,15 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-  // State to manage form inputs
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+    email: '',
+    password: '',
   });
-
-  // State to manage loading
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -19,111 +18,135 @@ const Login = () => {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+
+    // Define API endpoints
+    const adminLoginUrl = 'https://expensemanager-production-4513.up.railway.app/api/admin/login';
+    const driverLoginUrl = 'https://expensemanager-production-4513.up.railway.app/api/driver/login';
 
     try {
-      const response = await fetch(
-        "https://expensemanager-production-4513.up.railway.app/api/admin/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password,
-          }),
+      // Try admin login first
+      let response = await fetch(adminLoginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const token = data.token;
+        if (!token) {
+          throw new Error('No token received from server.');
         }
-      );
+
+        localStorage.setItem('authToken', token);
+        alert('Admin login successful!');
+        setFormData({ email: '', password: '' });
+        navigate('/admin/list');
+        return;
+      }
+
+      // If admin login fails, try driver login
+      response = await fetch(driverLoginUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to log in.");
+        throw new Error(errorData.message || 'Failed to log in.');
       }
 
-      // Show success alert
-      alert("Login successful!");
+      const data = await response.json();
+      const token = data.token;
+      if (!token) {
+        throw new Error('No token received from server.');
+      }
 
-      // Clear form
-      setFormData({ email: "", password: "" });
+      localStorage.setItem('authToken', token);
+      alert('Driver login successful!');
+      setFormData({ email: '', password: '' });
+      navigate('/driverdashboard');
     } catch (error) {
-      // Show error alert
-      alert(error.message || "Failed to log in. Please try again.");
+      setError(error.message || 'Failed to log in. Please check your credentials and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-semibold text-center text-gray-800 mb-4">
+    <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
+      <h2 className="text-[32px] robotosemibold text-center  mb-4">
           Welcome Back
         </h2>
         <p className="text-center text-gray-600 mb-6">
-          Secure access to your fleet anytime, anywhere
+          Secure access to your dashboard
         </p>
+      <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md">
+        
+
+        {error && <p className="text-red-500 mb-4">{error}</p>}
 
         <div className="space-y-4">
-          <h3 className="text-lg font-medium text-gray-700">Sign in</h3>
-          <p className="text-sm text-gray-500">Choose your preferred login method</p>
+          <h3 className="text-[24px] text-center robotosemibold text-gray-700">Sign in</h3>
+          <p className="text-sm text-gray-500 text-center">Use your credentials to log in</p>
+
+          
 
           <div>
-            <button
-              type="button"
-              className="w-full bg-blue-700 text-white p-2 rounded-md mb-4 hover:bg-blue-800 transition-colors"
-              disabled
-            >
-              Email
-            </button>
+            <label className="block text-sm font-medium text-gray-700">
+              Email or User Name
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="Enter your email"
+              className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email or User Name
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none"
-                required
-              />
-            </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Enter your password"
+              className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
 
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter your password"
-                className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none"
-                required
-              />
-            </div>
+         
 
-            <p className="text-sm text-blue-600 hover:underline cursor-pointer text-right mt-4">
-              Forgot Password?
-            </p>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-700 text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4"
-              disabled={loading}
-            >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full bg-[#0078BD] text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4 disabled:opacity-50"
+            disabled={loading}
+          >
+            {loading ? 'Signing in...' : 'Sign in'}
+          </button>
         </div>
       </div>
     </div>

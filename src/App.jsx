@@ -7,6 +7,7 @@ import Overview from "./Pages/Overview";
 import Register from "./auth/Register";
 import Login from "./auth/Login";
 import List from "./admin/List";
+import Alldrivers from "./admin/Alldrivers";
 
 function App() {
   return (
@@ -26,6 +27,8 @@ function App() {
         {/* admin layout routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="list" element={<List />} />
+          <Route path="alldrivers" element={<Alldrivers />} />
+
         </Route>
       </Routes>
     </Router>
