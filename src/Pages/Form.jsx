@@ -1,18 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { FaTimes } from 'react-icons/fa';
 
 const Form = () => {
-  const [emergencyReroute, setEmergencyReroute] = useState(true);
-  const [expressPickup, setExpressPickup] = useState(false);
   const [callNumber, setCallNumber] = useState('');
   const [selectedClientId, setSelectedClientId] = useState('');
-  const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [unitQuantity, setUnitQuantity] = useState('');
-  const [baseRate, setBaseRate] = useState('');
-  const [hst, setHst] = useState('');
-  const [total, setTotal] = useState('');
-  const [freeUnits, setFreeUnits] = useState('');
+  const [selectedServiceIds, setSelectedServiceIds] = useState([]);
+  const [rems, setRems] = useState('');
+  const [rpm, setRpm] = useState('');
+  const [pr1, setPr1] = useState('');
   const [clients, setClients] = useState([]);
   const [currentServices, setCurrentServices] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,7 +21,7 @@ const Form = () => {
       return;
     }
 
-    fetch('https://expensemanager-production-4513.up.railway.app/api/driver/getAllClients', {
+    fetch('https://expensemanager-production-4513.up.railway.app/api/common/getAllClients', {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -49,35 +46,27 @@ const Form = () => {
     setSelectedClientId(id);
     const client = clients.find(c => c._id === id);
     setCurrentServices(client ? client.services : []);
-    setSelectedServiceId('');
-    setUnitQuantity('');
-    setBaseRate('');
-    setHst('');
-    setTotal('');
-    setFreeUnits('');
+    setSelectedServiceIds([]);
+    setRems('');
+    setRpm('');
+    setPr1('');
   };
 
   const handleServiceChange = (e) => {
     const id = e.target.value;
-    setSelectedServiceId(id);
-    const service = currentServices.find(s => s._id === id);
-    if (service) {
-      setBaseRate(service.baseRate.toString());
-      setHst(service.hst.toString());
-      setTotal(service.total.toString());
-      setFreeUnits(service.freeUnits.toString());
-    } else {
-      setBaseRate('');
-      setHst('');
-      setTotal('');
-      setFreeUnits('');
+    if (id && !selectedServiceIds.includes(id)) {
+      setSelectedServiceIds([...selectedServiceIds, id]);
+      e.target.value = ''; // Reset dropdown to placeholder
     }
-    setUnitQuantity('');
+  };
+
+  const handleRemoveService = (id) => {
+    setSelectedServiceIds(selectedServiceIds.filter(serviceId => serviceId !== id));
   };
 
   const handleSubmit = async () => {
-    if (!callNumber || !selectedClientId || !selectedServiceId) {
-      toast.error('Please enter call number, select a client, and select a service');
+    if (!callNumber || !selectedClientId || selectedServiceIds.length === 0) {
+      toast.error('Please enter call number, select a client, and select at least one service');
       return;
     }
 
@@ -89,22 +78,22 @@ const Form = () => {
 
     setIsSubmitting(true);
 
-    const qty = parseFloat(unitQuantity) || 0;
-    const servicesUsed = [{
-      serviceId: selectedServiceId,
-      unitQuantity: qty,
-      baseRate: parseFloat(baseRate) || 0,
-      hst: parseFloat(hst) || 0,
-      total: parseFloat(total) || 0,
-      freeUnits: parseInt(freeUnits) || 0
-    }];
+    const services = {
+      TOW: selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'TOW') || false,
+      "BOOST/LOCKOUT/TIRE CHANGE": selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'BOOST/LOCKOUT/TIRE CHANGE') || false,
+      GOA: selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'GOA') || false,
+      "REMS:KMS ENROUTE": rems ? parseInt(rems) || 0 : 0,
+      "RPM:KMS UNDER TOW": rpm ? parseInt(rpm) || 0 : 0,
+      "PR1:WAITING TIME": pr1 ? parseInt(pr1) || 0 : 0,
+      "UNDERGROUND SERVICE": selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'UNDERGROUND SERVICE') || false
+    };
 
     const body = {
       phoneNumber: callNumber,
       clientId: selectedClientId,
-      servicesUsed,
-      emergencyRerout: emergencyReroute,
-      expressLanePickup: expressPickup
+      services,
+      emergencyRerout: true,
+      expressLanePickup: false
     };
 
     try {
@@ -135,15 +124,11 @@ const Form = () => {
   const handleReset = () => {
     setCallNumber('');
     setSelectedClientId('');
-    setSelectedServiceId('');
-    setUnitQuantity('');
-    setBaseRate('');
-    setHst('');
-    setTotal('');
-    setFreeUnits('');
+    setSelectedServiceIds([]);
+    setRems('');
+    setRpm('');
+    setPr1('');
     setCurrentServices([]);
-    setEmergencyReroute(true);
-    setExpressPickup(false);
   };
 
   return (
@@ -152,27 +137,12 @@ const Form = () => {
         className="bg-white rounded-[8px] p-3 sm:p-6 md:p-8 lg:p-[62px] w-[100%] mx-auto mt-10"
         style={{ boxShadow: "0px 0px 16px #E3EBFC" }}
       >
-        {/* Title */}
         <h2 className="text-[#1E293B] text-[16px] sm:text-xl md:text-[24px] font-semibold mb-3 sm:mb-6">
           Driver inputs the calls
         </h2>
 
-        {/* Grid Form */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
-          {/* Call # */}
-          <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Call #</label>
-            <input
-              type="text"
-              value={callNumber}
-              onChange={(e) => setCallNumber(e.target.value)}
-              placeholder="Enter call number"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {/* Client */}
+          {/* Client (now first) */}
           <div>
             <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Client</label>
             <select
@@ -188,125 +158,99 @@ const Form = () => {
             </select>
           </div>
 
+          {/* Call # (now second, only numbers allowed) */}
+          <div>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Call #</label>
+            <input
+              type="text"
+              value={callNumber}
+              onChange={(e) => {
+                const onlyNums = e.target.value.replace(/\D/g, ""); // remove non-digits
+                setCallNumber(onlyNums);
+              }}
+              placeholder="Enter call number"
+              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+              disabled={isSubmitting}
+            />
+          </div>
+
           {/* Service */}
           <div>
             <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Service</label>
             <select
-              value={selectedServiceId}
+              value=""
               onChange={handleServiceChange}
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] bg-[#F8FAFC]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedClientId}
             >
               <option value="">Select a Service</option>
-              {currentServices.map(service => (
-                <option key={service._id} value={service._id}>{service.name}</option>
-              ))}
+              {currentServices
+                .filter(service => !selectedServiceIds.includes(service._id))
+                .map(service => (
+                  <option key={service._id} value={service._id}>{service.name}</option>
+                ))}
             </select>
+            {selectedServiceIds.length > 0 && (
+              <div className="mt-2 flex gap-2 flex-wrap">
+                {selectedServiceIds.map((serviceId) => {
+                  const service = currentServices.find(s => s._id === serviceId);
+                  return (
+                    <div
+                      key={serviceId}
+                      className="flex items-center text-[13px] text-[#555555] bg-white border border-[#DADDE2] rounded-full px-2.5 py-0.5"
+                    >
+                      <span>{service?.name || 'Unknown'}</span>
+                      <button
+                        onClick={() => handleRemoveService(serviceId)}
+                        className="ml-2 text-[#555555] hover:text-[#333333] focus:outline-none cursor-pointer"
+                        disabled={isSubmitting}
+                      >
+                        <FaTimes className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Unit Quantity */}
+          {/* Rems */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Unit Quantity</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rems</label>
             <input
-              type="number"
-              value={unitQuantity}
-              onChange={(e) => setUnitQuantity(e.target.value)}
-              placeholder="Enter unit quantity"
+              type="text"
+              value={rems}
+              onChange={(e) => setRems(e.target.value)}
+              placeholder="Enter Rems"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Base Rate */}
+          {/* Rpm */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Base Rate</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rpm</label>
             <input
-              type="number"
-              step="0.01"
-              value={baseRate}
-              onChange={(e) => setBaseRate(e.target.value)}
-              placeholder="Enter base rate"
+              type="text"
+              value={rpm}
+              onChange={(e) => setRpm(e.target.value)}
+              placeholder="Enter Rpm"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
           </div>
 
-          {/* HST */}
+          {/* Pr1 */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">HST</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Pr1</label>
             <input
-              type="number"
-              step="0.01"
-              value={hst}
-              onChange={(e) => setHst(e.target.value)}
-              placeholder="Enter HST"
+              type="text"
+              value={pr1}
+              onChange={(e) => setPr1(e.target.value)}
+              placeholder="Enter Pr1"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
-          </div>
-
-          {/* Total */}
-          <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Total</label>
-            <input
-              type="number"
-              step="0.01"
-              value={total}
-              onChange={(e) => setTotal(e.target.value)}
-              placeholder="Enter total"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {/* Free Units */}
-          <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Free Units</label>
-            <input
-              type="number"
-              value={freeUnits}
-              onChange={(e) => setFreeUnits(e.target.value)}
-              placeholder="Enter free units"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
-            />
-          </div>
-        </div>
-
-        {/* Toggles */}
-        <div className="mt-3 sm:mt-6 space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[#1E293B] text-[11px] sm:text-[14px] robotomedium">Emergency Reroute</span>
-            <button
-              onClick={() => setEmergencyReroute(!emergencyReroute)}
-              className={`w-9 h-5 sm:w-11 sm:h-6 flex items-center rounded-full p-1 transition-colors ${
-                emergencyReroute ? "bg-[#00C26B]" : "bg-gray-300"
-              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isSubmitting}
-            >
-              <div
-                className={`bg-white w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-md transform transition-transform ${
-                  emergencyReroute ? "translate-x-4 sm:translate-x-5" : "translate-x-0"
-                }`}
-              ></div>
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-[#1E293B] text-[11px] sm:text-[14px] robotomedium">Express Lane Pickup</span>
-            <button
-              onClick={() => setExpressPickup(!expressPickup)}
-              className={`w-9 h-5 sm:w-11 sm:h-6 flex items-center rounded-full p-1 transition-colors ${
-                expressPickup ? "bg-[#00C26B]" : "bg-gray-300"
-              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={isSubmitting}
-            >
-              <div
-                className={`bg-white w-3 h-3 sm:w-4 sm:h-4 rounded-full shadow-md transform transition-transform ${
-                  expressPickup ? "translate-x-4 sm:translate-x-5" : "translate-x-0"
-                }`}
-              ></div>
-            </button>
           </div>
         </div>
 
@@ -314,14 +258,14 @@ const Form = () => {
         <div className="flex flex-col sm:flex-row justify-end mt-3 sm:mt-6 gap-2 sm:gap-3">
           <button 
             onClick={handleReset} 
-            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[11px] sm:text-[14px] order-2 sm:order-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[11px] sm:text-[14px] order-2 sm:order-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
           >
             Reset
           </button>
           <button 
             onClick={handleSubmit} 
-            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md bg-[#0077CC] text-white text-[11px] sm:text-[14px] order-1 sm:order-2 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md bg-[#0077CC] text-white text-[11px] sm:text-[14px] order-1 sm:order-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

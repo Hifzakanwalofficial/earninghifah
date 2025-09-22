@@ -14,9 +14,11 @@ const Graph = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [weekStart, setWeekStart] = useState(null);
+  const [today, setToday] = useState(null);
 
   useEffect(() => {
-    const fetchCycleGraph = async () => {
+    const fetchWeeklyEarnings = async () => {
       try {
         // Retrieve the token from localStorage
         const token = localStorage.getItem("authToken");
@@ -25,7 +27,7 @@ const Graph = () => {
         }
 
         const response = await fetch(
-          "https://expensemanager-production-4513.up.railway.app/api/driver/cycle-graph",
+          "https://expensemanager-production-4513.up.railway.app/api/driver/weekly-earnings",
           {
             method: "GET",
             headers: {
@@ -37,38 +39,41 @@ const Graph = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch cycle graph data");
+          throw new Error(errorData.message || "Failed to fetch weekly earnings data");
         }
 
         const data = await response.json();
         
         // Transform API data into recharts-compatible format
-        const transformedData = data.graphData.map((day) => ({
+        const transformedData = data.barChartData.map((day) => ({
           name: new Date(day.date).toLocaleDateString("en-US", { 
+            weekday: "short",
             month: "short", 
             day: "numeric" 
-          }), // e.g., "Sep 19"
-          earnings: day.totalEarnings,
-          calls: day.totalCalls,
+          }), // e.g., "Mon Sep 16"
+          earnings: day.earnings,
+          date: day.date,
         }));
 
         setChartData(transformedData);
+        setWeekStart(data.weekStart);
+        setToday(data.today);
         setLoading(false);
       } catch (err) {
-        setError(err.message || "An error occurred while fetching data");
+        setError(err.message || "An error occurred while fetching weekly earnings data");
         setLoading(false);
       }
     };
 
-    fetchCycleGraph();
+    fetchWeeklyEarnings();
   }, []);
 
   // Chart Shimmer Component
   const ChartShimmer = () => (
     <div className="bg-white p-6 rounded-lg shadow-md">
       {/* Header Shimmer */}
-      <div className="w-32 h-5 bg-gray-200 rounded animate-pulse mb-2"></div>
-      <div className="w-48 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
+      <div className="w-40 h-6 bg-gray-200 rounded animate-pulse mb-2"></div>
+      <div className="w-56 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
 
       {/* Chart Area Shimmer */}
       <div className="w-full h-[300px] bg-gray-50 rounded-lg p-4">
@@ -144,13 +149,20 @@ const Graph = () => {
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <div className="text-red-500 text-center">
+          <h3 className="text-lg font-semibold mb-2">Error</h3>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold text-gray-800">Cycle Earnings</h2>
-      <p className="text-sm text-gray-500 mb-4">Daily earnings for the current cycle period.</p>
+      <h2 className="text-lg font-semibold text-gray-800">Weekly Earnings</h2>
+      <p className="text-sm text-gray-500 mb-4">Daily earnings for the current week period.</p>
 
       <div className="w-full h-[300px] [&>svg]:focus:outline-none">
         <ResponsiveContainer>

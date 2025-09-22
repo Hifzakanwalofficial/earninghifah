@@ -1,31 +1,58 @@
 import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { FaWpforms, FaSignOutAlt } from "react-icons/fa";
+import { FaWpforms, FaSignOutAlt, FaBars } from "react-icons/fa";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
 import { RiMoneyDollarCircleLine } from "react-icons/ri";
+import { MdWifiCalling2 } from "react-icons/md";
 
 const Layout = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); // State for logout modal
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  // Show logout confirmation modal
+  const handleLogoutClick = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  // Confirm logout
+  const handleLogoutConfirm = () => {
     localStorage.removeItem('authToken');
     setIsOpen(false);
+    setIsLogoutModalOpen(false);
     navigate('/login');
+  };
+
+  // Cancel logout
+  const handleLogoutCancel = () => {
+    setIsLogoutModalOpen(false);
   };
 
   return (
     <div className="flex min-h-screen">
+      {/* Top Bar for small screens with toggle button */}
+      <header className="bg-[#ffffff] p-4 flex justify-between items-center md:ml-[280px] sticky top-0 z-50 md:hidden">
+        <button
+          className="text-2xl cursor-pointer"
+          onClick={() => setIsOpen(true)}
+        >
+          <FaBars />
+        </button>
+      </header>
+
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 w-64 md:w-[280px] bg-white h-[100vh] text-black p-4 z-50 transform transition-transform duration-300 ease-in-out flex flex-col border-r border-gray-200 ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <h2 className="text-[16px] font-bold mb-6">Driver Panel</h2>
+        <h2 className="text-[24px] ms-5 italic font-semibold text-[#0078BD] mb-6">
+          Earning Dashboard
+        </h2>
+
         <nav className="flex flex-col gap-3 flex-1">
           <NavLink
-            to="/overview"
+            to="/driver/dashboard"
             className={({ isActive }) =>
               `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
                 isActive
@@ -39,7 +66,7 @@ const Layout = () => {
           </NavLink>
 
           <NavLink
-            to="/driverdashboard"
+            to="/driver/overview"
             className={({ isActive }) =>
               `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
                 isActive
@@ -53,7 +80,7 @@ const Layout = () => {
           </NavLink>
 
           <NavLink
-            to="/form"
+            to="/driver/form"
             className={({ isActive }) =>
               `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
                 isActive
@@ -65,10 +92,23 @@ const Layout = () => {
           >
             <FaWpforms className="w-5 h-5" /> Forms
           </NavLink>
+          <NavLink
+            to="/driver/callrecord"
+            className={({ isActive }) =>
+              `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium ${
+                isActive
+                  ? "bg-[#0078BD] text-white"
+                  : "text-black hover:bg-gray-100"
+              }`
+            }
+            onClick={() => setIsOpen(false)}
+          >
+            <MdWifiCalling2 className="w-5 h-5" /> Call Records
+          </NavLink>
 
           <div className="mt-auto">
             <button
-              onClick={handleLogout}
+              onClick={handleLogoutClick}
               className="flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium text-black hover:bg-gray-100 w-full text-left"
             >
               <FaSignOutAlt className="w-5 h-5" /> Logout
@@ -76,6 +116,32 @@ const Layout = () => {
           </div>
         </nav>
       </aside>
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 bg-[#00000071] z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Confirm Logout</h2>
+            <p className="mb-4">Are you sure you want to logout?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleLogoutCancel}
+                className="px-4 py-2 bg-gray-300 rounded cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirm}
+                className="px-4 py-2 bg-[#0078BD] text-white rounded cursor-pointer"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Overlay for mobile */}
       {isOpen && (

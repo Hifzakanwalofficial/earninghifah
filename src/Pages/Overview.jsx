@@ -26,24 +26,22 @@ const Overview = () => {
   const [chartData, setChartData] = useState([]);
   const [stats, setStats] = useState({
     totalCalls: 0,
-    totalEarnings: 0,
-    totalRems: 320, // Placeholder, as no mapping provided
-    totalPri: 45, // Placeholder, as no mapping provided
-    grandTotal: 7810, // Placeholder, as no mapping provided
+    totalRems: 0,
+    totalRpm: 0,
+    totalPri: 0,
+    grandTotal: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchCycleGraph = async () => {
+    const fetchMonthlyStats = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No authentication token found. Please log in.');
-        }
+        if (!token) throw new Error('No authentication token found. Please log in.');
 
         const response = await fetch(
-          'https://expensemanager-production-4513.up.railway.app/api/driver/cycle-graph',
+          'https://expensemanager-production-4513.up.railway.app/api/driver/monthly-stats',
           {
             method: 'GET',
             headers: {
@@ -55,25 +53,20 @@ const Overview = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch cycle graph data');
+          throw new Error(errorData.message || 'Failed to fetch monthly stats');
         }
 
         const data = await response.json();
 
-        const transformedData = data.graphData.map((day) => ({
-          name: new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }),
-          earnings: day.totalEarnings,
-        }));
+        setStats({
+          totalCalls: data.totals.totalCalls,
+          totalRems: data.totals.totalRems,
+          totalRpm: data.totals.totalRpm,
+          totalPri: data.totals.totalPr1,
+          grandTotal: data.totals.grandTotal,
+        });
 
-        const totalCalls = data.graphData.reduce((sum, day) => sum + day.totalCalls, 0);
-        const totalEarnings = data.graphData.reduce((sum, day) => sum + day.totalEarnings, 0);
-
-        setChartData(transformedData);
-        setStats((prevStats) => ({
-          ...prevStats,
-          totalCalls,
-          totalEarnings,
-        }));
+        setChartData(data.chartData || []);
         setLoading(false);
       } catch (err) {
         setError(err.message || 'An error occurred while fetching data');
@@ -81,7 +74,7 @@ const Overview = () => {
       }
     };
 
-    fetchCycleGraph();
+    fetchMonthlyStats();
   }, []);
 
   if (loading) {
@@ -130,7 +123,7 @@ const Overview = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total Call</h2>
+            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total CALLS</h2>
             <p className="text-2xl font-bold mt-2">{stats.totalCalls}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
@@ -140,8 +133,8 @@ const Overview = () => {
 
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total Rems</h2>
-            <p className="text-2xl font-bold mt-2">{stats.totalRems}</p>
+            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total REMS</h2>
+            <p className="text-2xl font-bold mt-2">{stats.totalRems.toLocaleString()}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
             <FaDollarSign className='text-[#778DA9] text-[18px] robotobold' />
@@ -150,8 +143,8 @@ const Overview = () => {
 
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total Rpm</h2>
-            <p className="text-2xl font-bold mt-2">${stats.totalEarnings.toLocaleString()}</p>
+            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total RPM</h2>
+            <p className="text-2xl font-bold mt-2">{stats.totalRpm.toLocaleString()}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
             <PiSpeedometerThin className='text-[#778DA9] text-[18px] robotobold' />
@@ -160,8 +153,8 @@ const Overview = () => {
 
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total Pri</h2>
-            <p className="text-2xl font-bold mt-2">{stats.totalPri}</p>
+            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total PR1</h2>
+            <p className="text-2xl font-bold mt-2">{stats.totalPri.toLocaleString()}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
             <BiMessageSquareError className='text-[#778DA9] text-[18px] robotobold' />
@@ -171,7 +164,7 @@ const Overview = () => {
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
             <h2 className="text-[16px] robotomedium text-[#333333B2]">Grand Total</h2>
-            <p className="text-2xl font-bold mt-2">{stats.grandTotal}</p>
+            <p className="text-2xl font-bold mt-2">{stats.grandTotal.toLocaleString()}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
             <FaChartLine className='text-[#778DA9] text-[18px] robotobold' />
@@ -181,7 +174,7 @@ const Overview = () => {
 
       <div className='mt-[44px]'>
         <p className="robotomedium text-[20px]">Monthly Performances</p>
-        <p className="robotoregular text-[#707070]">Overview of calls, PRI, Rems, and RPM over the last 6 months.</p>
+        <p className="robotoregular text-[#707070]">Overview of calls, Pr1, Rems, and Rpm over the last 6 months.</p>
       </div>
 
       {/* Charts / Tables Section */}

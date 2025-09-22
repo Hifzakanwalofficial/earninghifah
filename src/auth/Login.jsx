@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react'; // Importing icons for show/hide
+import { toast, ToastContainer } from 'react-toastify'; // Import react-toastify
+import 'react-toastify/dist/ReactToastify.css'; // Import toastify CSS
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -8,6 +11,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false); // State for password visibility
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -48,7 +52,7 @@ const Login = () => {
         }
 
         localStorage.setItem('authToken', token);
-        alert('Admin login successful!');
+        toast.success('Admin login successful!'); // Show success toast
         setFormData({ email: '', password: '' });
         navigate('/admin/list');
         return;
@@ -78,11 +82,12 @@ const Login = () => {
       }
 
       localStorage.setItem('authToken', token);
-      alert('Driver login successful!');
+      toast.success('Driver login successful!'); // Show success toast
       setFormData({ email: '', password: '' });
-      navigate('/driverdashboard');
+      navigate('/driver/dashboard');
     } catch (error) {
       setError(error.message || 'Failed to log in. Please check your credentials and try again.');
+      toast.error(error.message || 'Failed to log in. Please check your credentials and try again.'); // Show error toast
     } finally {
       setLoading(false);
     }
@@ -90,26 +95,20 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
-      <h2 className="text-[32px] robotosemibold text-center  mb-4">
-          Welcome Back
-        </h2>
-        <p className="text-center text-gray-600 mb-6">
-          Secure access to your dashboard
-        </p>
+      <h2 className="text-[32px] robotosemibold text-center mb-1">
+        Welcome Back
+      </h2>
+      <p className="text-center text-gray-600 mb-6">
+        Secure access to your dashboard
+      </p>
       <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md">
-        
-
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <h3 className="text-[24px] text-center robotosemibold text-gray-700">Sign in</h3>
           <p className="text-sm text-gray-500 text-center">Use your credentials to log in</p>
 
-          
-
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Email or User Name
+              Email 
             </label>
             <input
               type="email"
@@ -117,7 +116,7 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="mt-1 p-2 w-full border border-[#E6E6E6] rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#E6E6E6]"
               required
             />
           </div>
@@ -126,29 +125,36 @@ const Login = () => {
             <label className="block text-sm font-medium text-gray-700">
               Password
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Enter your password"
+                className="mt-1 p-2 w-full border border-[#E6E6E6] rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#E6E6E6]"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+              >
+                {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
+              </button>
+            </div>
           </div>
 
-         
-
           <button
-            type="button"
-            onClick={handleSubmit}
-            className="w-full bg-[#0078BD] text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4 disabled:opacity-50"
+            type="submit"
+            className="w-full bg-[#0078BD] text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4 disabled:opacity-50 cursor-pointer"
             disabled={loading}
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
-        </div>
+        </form>
       </div>
+      <ToastContainer /> {/* Add ToastContainer for displaying toasts */}
     </div>
   );
 };
