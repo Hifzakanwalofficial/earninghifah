@@ -129,7 +129,7 @@ const List = () => {
                               <button
                                 type="button"
                                 onClick={() => toggleDriverPassword(driver._id)}
-                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                                className="p-1 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
                                 title={passwordVisible[driver._id] ? 'Hide Password' : 'Show Password'}
                               >
                                 {passwordVisible[driver._id] ? (

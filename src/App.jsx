@@ -11,6 +11,7 @@ import Alldrivers from "./admin/Alldrivers";
 import CallHistory from "./admin/CallHistory";
 import Clientlist from "./admin/Clientlist";
 import History from "./Pages/History";
+import Violationlog from "./Pages/Violationlog";
 
 function App() {
   return (
@@ -23,9 +24,11 @@ function App() {
 
         {/* driver layout routes */}
         <Route path="/driver" element={<Layout />}>
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="overview" element={<Dashboard />} />
           <Route path="form" element={<Form />} />
-          <Route path="overview" element={<Overview />} />
+          <Route path="violationlog" element={<Violationlog />} />
+
+          <Route path="dashboard" element={<Overview />} />
           <Route path="callrecord" element={<History />} />
         </Route>
 

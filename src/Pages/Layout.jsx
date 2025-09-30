@@ -4,10 +4,11 @@ import { FaWpforms, FaSignOutAlt, FaBars } from "react-icons/fa";
 import { MdOutlineDashboardCustomize } from "react-icons/md";
 import { RiMoneyDollarCircleLine } from "react-icons/ri";
 import { MdWifiCalling2 } from "react-icons/md";
+import logo from '../images/logo.svg'
 
 const Layout = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); // State for logout modal
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const navigate = useNavigate();
 
   // Show logout confirmation modal
@@ -109,7 +110,7 @@ const Layout = () => {
           <div className="mt-auto">
             <button
               onClick={handleLogoutClick}
-              className="flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium text-black hover:bg-gray-100 w-full text-left"
+              className="flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium text-black hover:bg-gray-100 w-full text-left cursor-pointer"
             >
               <FaSignOutAlt className="w-5 h-5" /> Logout
             </button>
@@ -154,7 +155,7 @@ const Layout = () => {
       {/* Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px]">
         {/* Main Content */}
-        <main className="p-6 flex-1 bg-gray-100">
+        <main className="p-6 flex-1 bg-[#ffffff]">
           <Outlet />
         </main>
       </div>

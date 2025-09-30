@@ -95,7 +95,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
-      <h2 className="text-[32px] robotosemibold text-center mb-1">
+      <h2 className="text-[32px] robotosemibold text-center ">
         Welcome Back
       </h2>
       <p className="text-center text-gray-600 mb-6">
@@ -103,7 +103,7 @@ const Login = () => {
       </p>
       <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h3 className="text-[24px] text-center robotosemibold text-gray-700">Sign in</h3>
+          <h3 className="text-[24px] text-center mb-0 robotosemibold text-gray-700">Sign in</h3>
           <p className="text-sm text-gray-500 text-center">Use your credentials to log in</p>
 
           <div>
@@ -138,7 +138,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
               >
                 {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
               </button>

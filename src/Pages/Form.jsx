@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for redirect
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaTimes } from 'react-icons/fa';
@@ -10,9 +11,12 @@ const Form = () => {
   const [rems, setRems] = useState('');
   const [rpm, setRpm] = useState('');
   const [pr1, setPr1] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [clients, setClients] = useState([]);
   const [currentServices, setCurrentServices] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedCall, setSubmittedCall] = useState(null);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -45,7 +49,16 @@ const Form = () => {
     const id = e.target.value;
     setSelectedClientId(id);
     const client = clients.find(c => c._id === id);
-    setCurrentServices(client ? client.services : []);
+    const filteredServices = client 
+      ? client.services.filter(service => 
+          ![
+            "REMS:KMS ENROUTE",
+            "RPM:KMS UNDER TOW",
+            "PR1:WAITING TIME"
+          ].includes(service.name)
+        )
+      : [];
+    setCurrentServices(filteredServices);
     setSelectedServiceIds([]);
     setRems('');
     setRpm('');
@@ -56,7 +69,7 @@ const Form = () => {
     const id = e.target.value;
     if (id && !selectedServiceIds.includes(id)) {
       setSelectedServiceIds([...selectedServiceIds, id]);
-      e.target.value = ''; // Reset dropdown to placeholder
+      e.target.value = '';
     }
   };
 
@@ -65,8 +78,8 @@ const Form = () => {
   };
 
   const handleSubmit = async () => {
-    if (!callNumber || !selectedClientId || selectedServiceIds.length === 0) {
-      toast.error('Please enter call number, select a client, and select at least one service');
+    if (!callNumber || !selectedClientId || !date) {
+      toast.error('Please enter call number, select a client, and select a date');
       return;
     }
 
@@ -78,25 +91,35 @@ const Form = () => {
 
     setIsSubmitting(true);
 
-    const services = {
-      TOW: selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'TOW') || false,
-      "BOOST/LOCKOUT/TIRE CHANGE": selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'BOOST/LOCKOUT/TIRE CHANGE') || false,
-      GOA: selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'GOA') || false,
-      "REMS:KMS ENROUTE": rems ? parseInt(rems) || 0 : 0,
-      "RPM:KMS UNDER TOW": rpm ? parseInt(rpm) || 0 : 0,
-      "PR1:WAITING TIME": pr1 ? parseInt(pr1) || 0 : 0,
-      "UNDERGROUND SERVICE": selectedServiceIds.some(id => currentServices.find(s => s._id === id)?.name === 'UNDERGROUND SERVICE') || false
-    };
+    const services = {};
+    selectedServiceIds.forEach(id => {
+      const service = currentServices.find(s => s._id === id);
+      if (service) {
+        services[service.name] = true;
+      }
+    });
+
+    if (rems !== '' && !isNaN(rems) && Number(rems) > 0) {
+      services["REMS:KMS ENROUTE"] = Number(rems);
+    }
+    if (rpm !== '' && !isNaN(rpm) && Number(rpm) > 0) {
+      services["RPM:KMS UNDER TOW"] = Number(rpm);
+    }
+    if (pr1 !== '' && !isNaN(pr1) && Number(pr1) > 0) {
+      services["PR1:WAITING TIME"] = Number(pr1);
+    }
 
     const body = {
       phoneNumber: callNumber,
       clientId: selectedClientId,
       services,
+      date: new Date(date).toISOString(),
       emergencyRerout: true,
       expressLanePickup: false
     };
 
     try {
+      console.log('Submitting payload:', JSON.stringify(body, null, 2));
       const res = await fetch('https://expensemanager-production-4513.up.railway.app/api/driver/submitCall', {
         method: 'POST',
         headers: {
@@ -106,16 +129,21 @@ const Form = () => {
         body: JSON.stringify(body)
       });
 
+      const responseData = await res.json();
+      console.log('Backend response:', JSON.stringify(responseData, null, 2));
+
       if (res.ok) {
         toast.success('Call submitted successfully!');
+        setSubmittedCall(responseData.call);
         handleReset();
+        navigate('/driver/callrecord'); // Redirect to /driver/callrecord
       } else {
-        const errorData = await res.json();
-        toast.error(errorData.message || 'Error submitting call');
+        toast.error(responseData.message || 'Error submitting call');
+        console.error('Submission error:', responseData);
       }
     } catch (err) {
       console.error('Network error:', err);
-      toast.error('Network error occurred. Please try again.');
+      toast.error(`Network error occurred: ${err.message}. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
@@ -128,7 +156,9 @@ const Form = () => {
     setRems('');
     setRpm('');
     setPr1('');
+    setDate(new Date().toISOString().split('T')[0]);
     setCurrentServices([]);
+    setSubmittedCall(null);
   };
 
   return (
@@ -138,18 +168,20 @@ const Form = () => {
         style={{ boxShadow: "0px 0px 16px #E3EBFC" }}
       >
         <h2 className="text-[#1E293B] text-[16px] sm:text-xl md:text-[24px] font-semibold mb-3 sm:mb-6">
-          Driver inputs the calls
+          Input call details
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
-          {/* Client (now first) */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Client</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">
+              Client <span className="text-red-500">*</span>
+            </label>
             <select
               value={selectedClientId}
               onChange={handleClientChange}
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] bg-[#F8FAFC]"
               disabled={isSubmitting}
+              required
             >
               <option value="">Select a client</option>
               {clients.map(client => (
@@ -158,25 +190,41 @@ const Form = () => {
             </select>
           </div>
 
-          {/* Call # (now second, only numbers allowed) */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Call #</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">
+              Call # <span className="text-red-500">*</span>
+            </label>
             <input
               type="text"
               value={callNumber}
-              onChange={(e) => {
-                const onlyNums = e.target.value.replace(/\D/g, ""); // remove non-digits
-                setCallNumber(onlyNums);
-              }}
+              onChange={(e) => setCallNumber(e.target.value)}
               placeholder="Enter call number"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
+              required
             />
           </div>
 
-          {/* Service */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">Service</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">
+              Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              onClick={(e) => e.target.showPicker()}
+              placeholder="Select a date"
+              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] appearance-none cursor-pointer"
+              disabled={isSubmitting}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] mb-1 sm:mb-2 robotomedium">
+              Service
+            </label>
             <select
               value=""
               onChange={handleServiceChange}
@@ -214,47 +262,46 @@ const Form = () => {
             )}
           </div>
 
-          {/* Rems */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rems</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rems (Kms Enroute)</label>
             <input
-              type="text"
+              type="number"
               value={rems}
               onChange={(e) => setRems(e.target.value)}
-              placeholder="Enter Rems"
+              placeholder="Enter Kms Enroute"
+              min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Rpm */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rpm</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rpm (Kms Under Tow)</label>
             <input
-              type="text"
+              type="number"
               value={rpm}
               onChange={(e) => setRpm(e.target.value)}
-              placeholder="Enter Rpm"
+              placeholder="Enter Kms Under Tow"
+              min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
           </div>
 
-          {/* Pr1 */}
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Pr1</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Pr1 (Waiting Time)</label>
             <input
-              type="text"
+              type="number"
               value={pr1}
               onChange={(e) => setPr1(e.target.value)}
-              placeholder="Enter Pr1"
+              placeholder="Enter Waiting Time"
+              min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
             />
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="flex flex-col sm:flex-row justify-end mt-3 sm:mt-6 gap-2 sm:gap-3">
           <button 
             onClick={handleReset} 
@@ -279,7 +326,53 @@ const Form = () => {
           </button>
         </div>
       </div>
-      
+
+      {submittedCall && (
+        <div
+          className="bg-white rounded-[8px] p-3 sm:p-6 md:p-8 lg:p-[62px] w-[100%] mx-auto mt-6"
+          style={{ boxShadow: "0px 0px 16px #E3EBFC" }}
+        >
+          <h2 className="text-[#1E293B] text-[16px] sm:text-xl md:text-[24px] font-semibold mb-3 sm:mb-6">
+            Submitted Call Details
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:gap-6">
+            <div>
+              <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Call Number</label>
+              <p className="text-[#1E293B] text-[11px] sm:text-[14px]">{submittedCall.phoneNumber}</p>
+            </div>
+            <div>
+              <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Client</label>
+              <p className="text-[#1E293B] text-[11px] sm:text-[14px]">{clients.find(c => c._id === submittedCall.clientId)?.name || 'Unknown'}</p>
+            </div>
+            <div>
+              <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Date</label>
+              <p className="text-[#1E293B] text-[11px] sm:text-[14px]">{new Date(submittedCall.date).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Services Used</label>
+              {submittedCall.servicesUsed.length > 0 ? (
+                submittedCall.servicesUsed.map((service, index) => (
+                  <div key={index} className="mb-2">
+                    <p className="text-[#1E293B] text-[11px] sm:text-[14px] font-semibold">{service.name}</p>
+                    <p className="text-[#555555] text-[10px] sm:text-[12px]">Quantity: {service.unitQuantity} {service.unitType || 'unit'}</p>
+                    <p className="text-[#555555] text-[10px] sm:text-[12px]">Base Rate: ${service.baseRate}</p>
+                    <p className="text-[#555555] text-[10px] sm:text-[12px]">Subtotal: ${service.subtotal}</p>
+                    <p className="text-[#555555] text-[10px] sm:text-[12px]">HST: ${service.hst}</p>
+                    <p className="text-[#555555] text-[10px] sm:text-[12px]">Total: ${service.total}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[#555555] text-[10px] sm:text-[12px]">No services recorded</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Total Earnings</label>
+              <p className="text-[#1E293B] text-[11px] sm:text-[14px] font-semibold">${submittedCall.totalEarnings}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ToastContainer 
         position="top-right"
         autoClose={3000}

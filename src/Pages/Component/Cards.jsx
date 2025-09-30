@@ -41,7 +41,7 @@ const Cards = () => {
 
         const monthlyData = await monthlyResponse.json();
 
-        // Fetch cycle progress data (for the second card)
+        // Fetch cycle progress data (for the second card and earnings)
         const cycleResponse = await fetch('https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress', {
           method: 'GET',
           headers: {
@@ -58,7 +58,7 @@ const Cards = () => {
         const cycleData = await cycleResponse.json();
 
         setMonthlyData({
-          currentEarnings: monthlyData.totals.current.earnings,
+          currentEarnings: cycleData.totalEarnings, // Use cycleData.totalEarnings for Total Earnings card
           previousEarnings: monthlyData.totals.previous.earnings,
           comparison: monthlyData.totals.comparison.earnings,
           currentMonthRange: monthlyData.monthRange.current,
@@ -161,21 +161,21 @@ const Cards = () => {
 
   return (
     <div className="flex gap-4 mb-[32px]">
-      {/* Left Card (Unchanged) */}
+      {/* Left Card (Total Earnings) */}
       <div className="w-1/2 bg-[#0078BD] px-[14px] py-[22px] rounded-[8px] flex items-center justify-between">
         <div>
           <p className="text-white robotomedium text-[20px]">Total Earnings</p>
           <p className="text-white robotomedium text-[14px] my-[14px]">
-            As of {formatDate(monthlyData.currentMonthRange.start)}
+            As of {formatDate(cycleData.cycleStart)} - {formatDate(cycleData.cycleEnd)}
           </p>
           <p className="text-[#ffffff] text-[14px] robotomedium flex gap-2">
             <BsArrowUpRight /> {getComparisonText()}
           </p>
         </div>
-        <div className="robotobold text-white text-[32px]">${monthlyData.currentEarnings.toFixed(2)}</div>
+        <div className="robotobold text-white text-[32px]">${cycleData.totalEarnings.toFixed(2)}</div>
       </div>
 
-      {/* Right Card (Updated for Cycle Progress) */}
+      {/* Right Card (Cycle Earnings Summary) */}
       <div
         className="w-1/2 bg-white px-[14px] py-[22px] rounded-[8px]"
         style={{ boxShadow: '0px 0px 16px #E3EBFC' }}

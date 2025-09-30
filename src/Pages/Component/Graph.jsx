@@ -14,138 +14,90 @@ const Graph = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [weekStart, setWeekStart] = useState(null);
-  const [today, setToday] = useState(null);
+  const [cycleStart, setCycleStart] = useState(null);
+  const [cycleEnd, setCycleEnd] = useState(null);
+
+  // Helper function to check if a date is valid
+  const isValidDate = (date) => {
+    return date instanceof Date && !isNaN(date);
+  };
 
   useEffect(() => {
-    const fetchWeeklyEarnings = async () => {
+    const fetchCycleProgress = async () => {
       try {
-        // Retrieve the token from localStorage
         const token = localStorage.getItem("authToken");
-        if (!token) {
-          throw new Error("No authentication token found. Please log in.");
-        }
+        if (!token) throw new Error("No authentication token found. Please log in.");
 
         const response = await fetch(
-          "https://expensemanager-production-4513.up.railway.app/api/driver/weekly-earnings",
+          "https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress",
           {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`, // Include the token in the Authorization header
+              Authorization: `Bearer ${token}`,
             },
           }
         );
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch weekly earnings data");
+          throw new Error(errorData.message || "Failed to fetch cycle progress data");
         }
 
         const data = await response.json();
-        
-        // Transform API data into recharts-compatible format
-        const transformedData = data.barChartData.map((day) => ({
-          name: new Date(day.date).toLocaleDateString("en-US", { 
-            weekday: "short",
-            month: "short", 
-            day: "numeric" 
-          }), // e.g., "Mon Sep 16"
-          earnings: day.earnings,
-          date: day.date,
-        }));
+
+        // Filter up to today (in UTC)
+        const today = new Date();
+        today.setUTCHours(0, 0, 0, 0); // Normalize to start of day in UTC
+
+        const transformedData = data.progress
+          .filter((day) => {
+            const dayDate = new Date(day.date);
+            return isValidDate(dayDate) && dayDate <= today;
+          })
+          .map((day) => ({
+            name: new Date(day.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              timeZone: "UTC", // Ensure UTC for display
+            }),
+            earnings: parseFloat(Number(day.totalEarnings).toFixed(2)),
+            date: day.date,
+          }));
 
         setChartData(transformedData);
-        setWeekStart(data.weekStart);
-        setToday(data.today);
+        setCycleStart(data.cycleStart);
+        setCycleEnd(data.cycleEnd);
         setLoading(false);
       } catch (err) {
-        setError(err.message || "An error occurred while fetching weekly earnings data");
+        console.error("API Error:", err);
+        setError(err.message || "An error occurred while fetching cycle progress data");
         setLoading(false);
       }
     };
 
-    fetchWeeklyEarnings();
+    fetchCycleProgress();
   }, []);
 
-  // Chart Shimmer Component
-  const ChartShimmer = () => (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      {/* Header Shimmer */}
-      <div className="w-40 h-6 bg-gray-200 rounded animate-pulse mb-2"></div>
-      <div className="w-56 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
-
-      {/* Chart Area Shimmer */}
-      <div className="w-full h-[300px] bg-gray-50 rounded-lg p-4">
-        {/* Y-axis labels shimmer */}
-        <div className="flex">
-          <div className="flex flex-col justify-between h-[260px] w-8 mr-4">
-            <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-
-          {/* Chart bars shimmer */}
-          <div className="flex-1">
-            <div className="flex items-end justify-between h-[260px] px-4">
-              {/* Bar 1 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '120px'}}></div>
-              </div>
-              {/* Bar 2 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '80px'}}></div>
-              </div>
-              {/* Bar 3 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '150px'}}></div>
-              </div>
-              {/* Bar 4 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '90px'}}></div>
-              </div>
-              {/* Bar 5 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '110px'}}></div>
-              </div>
-              {/* Bar 6 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '75px'}}></div>
-              </div>
-              {/* Bar 7 */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 bg-gray-200 rounded-t animate-pulse mb-2" style={{height: '95px'}}></div>
-              </div>
-            </div>
-
-            {/* X-axis labels shimmer */}
-            <div className="flex justify-between px-4 mt-2">
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-              <div className="w-6 h-3 bg-gray-200 rounded animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Legend shimmer */}
-        <div className="flex justify-center mt-4">
-          <div className="flex items-center">
-            <div className="w-3 h-3 bg-gray-200 rounded animate-pulse mr-2"></div>
-            <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  // Format date for display in UTC
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (!isValidDate(date)) return "N/A";
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  };
 
   if (loading) {
-    return <ChartShimmer />;
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <p>Loading chart...</p>
+      </div>
+    );
   }
 
   if (error) {
@@ -161,25 +113,27 @@ const Graph = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold text-gray-800">Weekly Earnings</h2>
-      <p className="text-sm text-gray-500 mb-4">Daily earnings for the current week period.</p>
+      <h2 className="text-lg font-semibold text-gray-800">Cycle Earnings</h2>
+      <p className="text-sm text-gray-500 mb-4">
+        Daily earnings from {formatDate(cycleStart)} to {formatDate(cycleEnd)}
+      </p>
 
-      <div className="w-full h-[300px] [&>svg]:focus:outline-none">
+      <div className="w-full h-[300px]">
         <ResponsiveContainer>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
             <YAxis />
-            <Tooltip 
+            <Tooltip
               formatter={(value, name) => {
-                if (name === 'earnings') {
-                  return [`₨${value.toLocaleString()}`, 'Earnings'];
+                if (name === "earnings") {
+                  return [`$${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, "Earnings"];
                 }
                 return [value, name];
               }}
             />
             <Legend />
-            <Bar dataKey="earnings" fill="#3498db" />
+            <Bar dataKey="earnings" fill="#3498db" barSize={30} />
           </BarChart>
         </ResponsiveContainer>
       </div>

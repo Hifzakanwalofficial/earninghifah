@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEdit } from "react-icons/fa";
+import { IoEyeOffOutline } from "react-icons/io5";
 
 const Alldrivers = () => {
   const navigate = useNavigate();
@@ -8,22 +9,49 @@ const Alldrivers = () => {
   const [loading, setLoading] = useState(true);
   const [showPassword, setShowPassword] = useState({});
   const [callsCount, setCallsCount] = useState({});
+  const [selectedDrivers, setSelectedDrivers] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    status: "active",
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDrivers, setTotalDrivers] = useState(0);
+  const limit = 10;
 
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    const fetchDrivers = async () => {
+      setLoading(true);
+      const token = localStorage.getItem("authToken");
 
-    fetch(
-      "https://expensemanager-production-4513.up.railway.app/api/admin/drivers?page=1&limit=10",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    )
-      .then((res) => res.json())
-      .then(async (data) => {
+      try {
+        const res = await fetch(
+          `https://expensemanager-production-4513.up.railway.app/api/admin/drivers?page=${currentPage}&limit=${limit}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const data = await res.json();
+        
         const fetchedDrivers = data.drivers || [];
-        setDrivers(fetchedDrivers);
+        setDrivers(
+          fetchedDrivers.map((driver) => ({
+            ...driver,
+            status: driver.status || "active",
+          }))
+        );
+        setTotalPages(data.totalPages || 1);
+        setTotalDrivers(data.totalDrivers || 0);
 
         const callsData = {};
         await Promise.all(
@@ -47,12 +75,14 @@ const Alldrivers = () => {
 
         setCallsCount(callsData);
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error(err);
         setLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    fetchDrivers();
+  }, [currentPage]);
 
   const handleDriverClick = (driverId) => {
     navigate(`/admin/callhistory/${driverId}`);
@@ -65,71 +95,381 @@ const Alldrivers = () => {
     }));
   };
 
+  const handleSelectDriver = (id) => {
+    setSelectedDrivers((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedDrivers([]);
+    } else {
+      setSelectedDrivers(drivers.map((d) => d._id));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedDrivers([]);
+    setSelectAll(false);
+  };
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
+    const token = localStorage.getItem("authToken");
+
+    try {
+      const response = await fetch(
+        `https://expensemanager-production-4513.up.railway.app/api/admin/deleteDrivers`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ driverIds: selectedDrivers }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete drivers");
+      }
+
+      setDrivers((prev) => prev.filter((d) => !selectedDrivers.includes(d._id)));
+      setSelectedDrivers([]);
+      setSelectAll(false);
+      setShowDeleteModal(false);
+      // Refresh data after deletion
+      setCurrentPage(1);
+    } catch (err) {
+      console.error(err);
+    }
+    setDeleteLoading(false);
+  };
+
+  const handleEditClick = (driver) => {
+    setSelectedDriver(driver);
+    setEditFormData({
+      name: driver.name,
+      email: driver.email,
+      password: driver.password,
+      status: driver.status || "active",
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateDriver = async () => {
+    setEditLoading(true);
+    const token = localStorage.getItem("authToken");
+
+    try {
+      const response = await fetch(
+        `https://expensemanager-production-4513.up.railway.app/api/admin/updateDriver/${selectedDriver._id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: editFormData.name,
+            email: editFormData.email,
+            password: editFormData.password,
+            status: editFormData.status,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update driver");
+      }
+
+      setDrivers(
+        drivers.map((driver) =>
+          driver._id === selectedDriver._id
+            ? { ...driver, ...editFormData }
+            : driver
+        )
+      );
+      setShowEditModal(false);
+      setSelectedDriver(null);
+      setEditFormData({ name: "", email: "", password: "", status: "active" });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update driver. Please try again.");
+    }
+    setEditLoading(false);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      setSelectedDrivers([]);
+      setSelectAll(false);
+    }
+  };
+
   return (
-    <div>
-      {/* Table Header */}
-      <div className="bg-[#FAFAFC] px-[14px] py-[11px] grid grid-cols-5 font-semibold border-b border-[#FAFAFC]">
-        <p className="w-full text-left">Driver Name</p>
-        <p className="w-full text-left">Email</p>
-        <p className="w-full text-left">Password</p>
-        <p className="w-full text-left">Calls</p>
-        <p className="w-full text-left">Total Earnings</p>
+    <div className="relative">
+      {/* Action Buttons (Delete/Cancel) */}
+      {selectedDrivers.length > 0 && (
+        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Delete
+          </button>
+          <button
+            onClick={handleCancelSelection}
+            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="overflow-x-auto w-full">
+        <table className="w-full border-collapse rounded-lg table-auto sm:table-fixed">
+          <thead className="bg-[#FAFAFC] text-left text-sm sm:text-base">
+            <tr>
+              <th className="px-4 py-3 w-[19%]">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <span className="font-semibold">Driver Name</span>
+                </div>
+              </th>
+              <th className="px-4 py-3 w-[19%] font-semibold">Email</th>
+              <th className="px-4 py-3 w-[19%] font-semibold">Password</th>
+              <th className="px-4 py-3 w-[19%] font-semibold">Calls</th>
+              <th className="px-4 py-3 w-[19%] font-semibold">Total Earnings</th>
+              <th className="px-4 py-3 w-[5%] font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              [...Array(5)].map((_, i) => (
+                <tr key={i} className="border-b border-[#FAFAFC] animate-pulse">
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <div className="h-4 w-full bg-gray-200 rounded"></div>
+                  </td>
+                </tr>
+              ))
+            ) : drivers.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-4 py-5 text-center text-gray-500">
+                  No drivers Available
+                </td>
+              </tr>
+            ) : (
+              drivers.map((driver) => (
+                <tr
+                  key={driver._id}
+                  onClick={() => handleDriverClick(driver._id)}
+                  className="border-b border-[#FAFAFC] hover:bg-gray-100 cursor-pointer text-sm sm:text-base"
+                >
+                  <td className="px-4 py-5">
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedDrivers.includes(driver._id)}
+                        onChange={() => handleSelectDriver(driver._id)}
+                      />
+                      <span className="truncate">{driver.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-5">
+                    <span className="truncate">{driver.email}</span>
+                  </td>
+                  <td
+                    className="px-4 py-5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">
+                        {showPassword[driver._id]
+                          ? driver.password
+                          : "•".repeat(8)}
+                      </span>
+                      <button
+                        onClick={() => togglePassword(driver._id)}
+                        className="cursor-pointer"
+                      >
+                        <IoEyeOffOutline className="text-gray-600" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className="px-4 py-5">
+                    {callsCount[driver._id] !== undefined
+                      ? callsCount[driver._id]
+                      : "-"}
+                  </td>
+                  <td className="px-4 py-5">
+                    ${driver.totalEarnings
+                      ? Number(driver.totalEarnings).toFixed(2)
+                      : "0.00"}
+                  </td>
+                  <td
+                    className="px-4 py-5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => handleEditClick(driver)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <FaEdit />
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* Loading shimmer */}
-      {loading ? (
-        [...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="animate-pulse bg-white pt-5 px-[14px] pb-3 grid grid-cols-5 border-b border-[#FAFAFC]"
-          >
-            <div className="h-4 w-full bg-gray-200 rounded"></div>
-            <div className="h-4 w-full bg-gray-200 rounded"></div>
-            <div className="h-4 w-full bg-gray-200 rounded"></div>
-            <div className="h-4 w-full bg-gray-200 rounded"></div>
-            <div className="h-4 w-full bg-gray-200 rounded"></div>
-          </div>
-        ))
-      ) : drivers.length === 0 ? (
-        <div className="flex justify-center items-center h-[calc(100vh-100px)]">
-          <p className="text-gray-500 text-[16px]">No drivers Available</p>
+      {/* Pagination Controls */}
+      <div className="flex justify-between items-center mt-4 px-4">
+        <div>
+          Showing {drivers.length} of {totalDrivers} drivers
         </div>
-      ) : (
-        drivers.map((driver) => (
-          <div
-            key={driver._id}
-            onClick={() => handleDriverClick(driver._id)}
-            className="bg-[#ffffff] pt-5 px-[14px] pb-3 grid grid-cols-5 cursor-pointer hover:bg-gray-100 border-b border-[#FAFAFC]"
+        <div className="flex gap-2">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
           >
-            <p className="w-full text-left">{driver.name}</p>
-            <p className="w-full text-left">{driver.email}</p>
-            <div
-              className="w-full flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <p className="truncate">
-                {showPassword[driver._id]
-                  ? driver.password
-                  : "•".repeat(driver.password.length)}
-              </p>
-              <button onClick={() => togglePassword(driver._id)}>
-                {showPassword[driver._id] ? (
-                  <FaEyeSlash className="text-gray-600" />
-                ) : (
-                  <FaEye className="text-gray-600" />
-                )}
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#00000075] bg-opacity-40">
+          <div className="bg-white rounded-lg p-6 shadow-lg w-[90%] max-w-[400px]">
+            <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
+            <p className="mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-bold">{selectedDrivers.length}</span>{" "}
+              driver(s)?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+              >
+                {deleteLoading ? "Deleting..." : "Delete"}
               </button>
             </div>
-            <p className="w-full text-left">
-              {callsCount[driver._id] !== undefined
-                ? callsCount[driver._id]
-                : "-"}
-            </p>
-            <p className="w-full text-left">
-              {driver.totalEarnings ? Number(driver.totalEarnings).toFixed(2) : "0.00"}
-            </p>
           </div>
-        ))
+        </div>
+      )}
+
+      {/* Edit Driver Modal */}
+      {showEditModal && selectedDriver && (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#00000075] bg-opacity-40">
+          <div className="bg-white rounded-lg p-6 shadow-lg w-[90%] max-w-[400px]">
+            <h2 className="text-lg font-semibold mb-4">Edit Driver</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={editFormData.name}
+                onChange={handleEditInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={editFormData.email}
+                onChange={handleEditInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <input
+                type="text"
+                name="password"
+                value={editFormData.password}
+                onChange={handleEditInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateDriver}
+                disabled={editLoading}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                {editLoading ? "Updating..." : "Update"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
