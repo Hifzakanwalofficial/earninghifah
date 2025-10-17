@@ -14,6 +14,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FaRegUser } from "react-icons/fa";
 import { BiTaxi } from "react-icons/bi";
 import { MdOutlineSpaceDashboard } from "react-icons/md";
+import { PhoneCall } from "lucide-react";
 
 const AdminLayout = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -588,6 +589,21 @@ const AdminLayout = () => {
             >
               <BiTaxi className="w-5 h-5" /> Drivers
             </NavLink>
+
+             <NavLink
+              to="/admin/calls-records"
+              className={({ isActive }) =>
+                `flex items-center gap-2 text-[14px] px-6 py-2 rounded font-medium cursor-pointer transition ${
+                  isActive
+                    ? "bg-[#0078BD] text-white"
+                    : "text-black hover:bg-gray-100"
+                }`
+              }
+              onClick={() => setIsOpen(false)}
+            >
+              <PhoneCall className="w-5 h-5" /> Calls records
+            </NavLink>
+
           </div>
           <div className="mt-auto fixed bottom-10">
             <button

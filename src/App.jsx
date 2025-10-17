@@ -15,6 +15,8 @@ import Violationlog from "./Pages/Violationlog";
 import ViolationFrom from "./admin/ViolationFrom";
 import ViolationTable from "./admin/ViolationTable";
 import DriverPerformanceAnalytics from "./admin/DrivercallEarningGraph";
+import CallGraph from "./admin/CallGraph";
+import CallRecorded from "./admin/AllCallRecord";
 
 function App() {
   return (
@@ -44,6 +46,8 @@ function App() {
           <Route path="violationform" element={<ViolationFrom />} />
           <Route path="violationtable" element={<ViolationTable />} />
           <Route path="earning" element={<DriverPerformanceAnalytics />} />
+          <Route path="calls" element={<CallGraph />} />
+          <Route path="calls-records" element={<CallRecorded />} />
 
 
         </Route>

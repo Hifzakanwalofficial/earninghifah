@@ -4,6 +4,8 @@ import ClientsTable from '../Pages/Component/ClientsTable';
 import { useNavigate } from 'react-router-dom';
 import StatsCards from './StatsCards';
 import { Baseurl } from '../Config';
+import DriverPerformanceAnalytics from './DrivercallEarningGraph';
+import CallGraph from './CallGraph';
 
 const List = () => {
   const [error, setError] = useState(null);
@@ -71,12 +73,18 @@ const List = () => {
     <div className="min-h-screen bg-[#ffffff] ">
       <p className="text-[24px] robotosemibold pt-[30px] pb-[20px]">Dashboard Overview</p>
       <StatsCards />
+
+      <DriverPerformanceAnalytics/>
+      <CallGraph/>
+
+
       {/* Tables Section */}
-      <div className="flex flex-wrap gap-4 w-[100%] mx-auto ">
-        {/* Drivers Table */}
+      {/* <div className="flex flex-wrap gap-4 w-[100%] mx-auto ">
         <div className="flex-1 min-w-[300px] bg-white rounded-lg overflow-hidden p-4 border border-[#F7F7F7]">
           <div className="flex justify-between items-center px-4 py-2 bg-white ">
             <h2 className=" robotomedium text-[20px]">List of Drivers</h2>
+
+
             <button
   onClick={handleViewAllDrivers}
   className="text-[14px] text-[#0078BD] hover:text-blue-700 robotomedium cursor-pointer"
@@ -151,13 +159,17 @@ const List = () => {
           )}
         </div>
 
-        {/* Clients Table */}
         <div className="flex-1 min-w-[300px] bg-white rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <ClientsTable />
           </div>
         </div>
-      </div>
+
+
+
+      </div> */}
+
+
     </div>
   );
 };
