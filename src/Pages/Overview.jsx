@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Linechart from './Component/Linechart';
 import { FiPhoneCall } from "react-icons/fi";
 import { FaDollarSign } from "react-icons/fa";
+import Cards from './Component/Cards'
+
 import { PiSpeedometerThin } from "react-icons/pi";
 import { BiMessageSquareError } from "react-icons/bi";
 import { FaChartLine } from "react-icons/fa6";
+import CallByClientsChart from './Component/CallByClientsChart';
+import { Baseurl } from '../Config';
 
 // Shimmer placeholder component for stats cards
 const ShimmerCard = () => (
@@ -41,7 +45,7 @@ const Overview = () => {
         if (!token) throw new Error('No authentication token found. Please log in.');
 
         const response = await fetch(
-          'https://expensemanager-production-4513.up.railway.app/api/driver/monthly-stats',
+          `${Baseurl}/driver/monthly-stats`,
           {
             method: 'GET',
             headers: {
@@ -200,7 +204,7 @@ const Overview = () => {
 
         <div className="bg-white px-[14px] py-[24px] rounded-xl shadow hover:shadow-lg transition flex items-center justify-between">
           <div>
-            <h2 className="text-[16px] robotomedium text-[#333333B2]">Grand Total</h2>
+            <h2 className="text-[16px] robotomedium text-[#333333B2]">Total Earning</h2>
             <p className="text-2xl font-bold mt-2">${stats.grandTotal.toLocaleString()}</p>
           </div>
           <div className='bg-[#778da93f] h-[40px] w-[40px] rounded-full flex items-center justify-center'>
@@ -211,16 +215,25 @@ const Overview = () => {
           </div>
         </div>
       </div>
+<div className='mt-6'>
 
+
+      <Cards />
+
+
+</div>
       <div className='mt-[44px]'>
         <p className="robotomedium text-[20px]">Monthly Performances</p>
         <p className="robotoregular text-[#707070]">Overview of calls, Pr1, Rems, and Rpm over the last  month.</p>
       </div>
 
       {/* Charts / Tables Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 w-[100%]">
-        <Linechart data={chartData} />
-      </div>
+     <div className="flex flex-wrap gap-3">
+  <Linechart />
+  <CallByClientsChart />
+</div>
+
+
     </div>
   );
 };

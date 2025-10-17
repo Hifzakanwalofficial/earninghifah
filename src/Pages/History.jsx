@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { Baseurl } from "../Config";
 
 const History = () => {
   const [history, setHistory] = useState([]);
@@ -9,8 +10,8 @@ const History = () => {
   const [toDate, setToDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectingFrom, setSelectingFrom] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date("2025-09-23T00:00:00Z"));
-  const [selectedYear, setSelectedYear] = useState(new Date("2025-09-23T00:00:00Z").getUTCFullYear());
+  const [currentDate, setCurrentDate] = useState(new Date("2025-10-02T00:00:00Z"));
+  const [selectedYear, setSelectedYear] = useState(new Date("2025-10-02T00:00:00Z").getUTCFullYear());
   const datePickerRef = useRef(null);
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -19,14 +20,17 @@ const History = () => {
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClientRecord, setSelectedClientRecord] = useState(null);
   const [selectedServiceName, setSelectedServiceName] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalCalls, setTotalCalls] = useState(0);
-  const limit = 10;
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Helper function to check if a date is valid
   const isValidDate = (date) => {
     return date instanceof Date && !isNaN(date);
+  };
+
+  // Helper function to capitalize the first letter of a string
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return "";
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
   };
 
   // Close date picker when clicking outside
@@ -43,41 +47,51 @@ const History = () => {
     };
   }, []);
 
-  // Filter history based on date range
+  // Filter history based on date range and search query
   useEffect(() => {
-    if (!fromDate && !toDate) {
-      setHistory(allHistory);
-      return;
-    }
-
     let filtered = allHistory;
-    if (fromDate && toDate) {
-      // Range filter
-      const from = new Date(fromDate + "T00:00:00Z");
-      const to = new Date(toDate + "T23:59:59.999Z");
-      filtered = allHistory.filter((record) => {
-        if (record.date) {
-          const recordDate = new Date(record.date);
-          return isValidDate(recordDate) && recordDate >= from && recordDate <= to;
-        }
-        return false;
-      });
-    } else if (fromDate) {
-      // Single date filter
-      const from = new Date(fromDate + "T00:00:00Z");
-      const to = new Date(fromDate + "T23:59:59.999Z");
-      filtered = allHistory.filter((record) => {
-        if (record.date) {
-          const recordDate = new Date(record.date);
-          return isValidDate(recordDate) && recordDate >= from && recordDate <= to;
-        }
-        return false;
-      });
-    }
-    setHistory(filtered);
-  }, [allHistory, fromDate, toDate]);
 
-  // Fetch history data with pagination
+    // Apply date range filter
+    if (fromDate || toDate) {
+      if (fromDate && toDate) {
+        // Range filter
+        const from = new Date(fromDate + "T00:00:00Z");
+        const to = new Date(toDate + "T23:59:59.999Z");
+        filtered = filtered.filter((record) => {
+          if (record.date) {
+            const recordDate = new Date(record.date);
+            return isValidDate(recordDate) && recordDate >= from && recordDate <= to;
+          }
+          return false;
+        });
+      } else if (fromDate) {
+        // Single date filter
+        const from = new Date(fromDate + "T00:00:00Z");
+        const to = new Date(fromDate + "T23:59:59.999Z");
+        filtered = filtered.filter((record) => {
+          if (record.date) {
+            const recordDate = new Date(record.date);
+            return isValidDate(recordDate) && recordDate >= from && recordDate <= to;
+          }
+          return false;
+        });
+      }
+    }
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((record) =>
+        record.clientName.toLowerCase().includes(query) ||
+        record.call.toLowerCase().includes(query)
+      );
+    }
+
+    // Set history to all filtered records
+    setHistory(filtered);
+  }, [allHistory, fromDate, toDate, searchQuery]);
+
+  // Fetch history data
   useEffect(() => {
     const fetchHistory = async () => {
       setLoading(true);
@@ -90,7 +104,7 @@ const History = () => {
 
       try {
         const res = await fetch(
-          `https://expensemanager-production-4513.up.railway.app/api/driver/getDriverCalls?page=${currentPage}&limit=${limit}`,
+          `${Baseurl}/driver/getDriverCalls?limit=0`,
           {
             method: "GET",
             headers: {
@@ -158,6 +172,7 @@ const History = () => {
                   : "0.00",
                 total: record.totalEarnings ? Number(record.totalEarnings).toFixed(2) : "0.00",
                 date: validDate,
+                createdAt: record.createdAt, // Store createdAt for sorting
                 status: record.status || (index % 2 === 0 ? "Approved" : "Pending"),
                 servicesUsed: record.servicesUsed?.map((service) => ({
                   ...service,
@@ -171,12 +186,9 @@ const History = () => {
               };
             })
             .filter((record) => record.date !== null)
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by createdAt newest first
           console.log("Formatted history:", formatted);
           setAllHistory(formatted);
-          setHistory(formatted);
-          setTotalPages(data.totalPages || 1);
-          setTotalCalls(data.totalCalls || 0);
         } else {
           setError(data.message || "Failed to fetch history.");
         }
@@ -189,7 +201,7 @@ const History = () => {
     };
 
     fetchHistory();
-  }, [currentPage]);
+  }, []);
 
   // Checkbox handling
   const handleSelectRecord = (id) => {
@@ -227,7 +239,7 @@ const History = () => {
 
     try {
       const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/driver/driver/calls`,
+        `${Baseurl}/driver/driver/calls`,
         {
           method: "DELETE",
           headers: {
@@ -247,7 +259,6 @@ const History = () => {
       setSelectedRecords([]);
       setSelectAll(false);
       setShowDeleteModal(false);
-      setCurrentPage(1); // Reset to first page after deletion
     } catch (err) {
       console.error("Error deleting records:", err);
     }
@@ -296,7 +307,7 @@ const History = () => {
 
     if (selectingFrom) {
       setFromDate(selectedDateStr);
-      setToDate(""); // Clear toDate to allow single date selection
+      setToDate("");
       setSelectingFrom(false);
     } else {
       if (fromDate && selectedDateStr < fromDate) {
@@ -351,7 +362,7 @@ const History = () => {
   };
 
   const generateYearOptions = () => {
-    const currentYear = new Date("2025-09-23T00:00:00Z").getUTCFullYear();
+    const currentYear = new Date("2025-10-02T00:00:00Z").getUTCFullYear();
     const years = [];
     for (let year = currentYear; year >= currentYear - 1; year--) {
       years.push(year);
@@ -370,12 +381,14 @@ const History = () => {
     return dateStr === fromDate || dateStr === toDate;
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-      setSelectedRecords([]);
-      setSelectAll(false);
-    }
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Helper function to format values (replace 0.00 with -)
+  const formatValue = (value) => {
+    return value === "0.00" ? "-" : value;
   };
 
   if (loading) {
@@ -427,7 +440,7 @@ const History = () => {
   }
 
   return (
-    <div className="border border-[#F7F7F7] p-4">
+    <div className="border border-[#F7F7F7] p-6">
       {selectedRecords.length > 0 && (
         <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
           <button
@@ -447,35 +460,22 @@ const History = () => {
 
       <div className="flex justify-between items-center px-4 py-2 bg-white">
         <h2 className="robotomedium text-[20px]">Call History</h2>
-
-        <div className="relative" ref={datePickerRef}>
-          <div
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
-          >
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
-              {getDateRangeText()}
-            </span>
-            {(fromDate || toDate) && (
+        <div className="flex items-center gap-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search by Client Name or Call No"
+              className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+            />
+            {searchQuery && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  clearDates();
+                onClick={() => {
+                  setSearchQuery("");
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -488,128 +488,169 @@ const History = () => {
               </button>
             )}
           </div>
-
-          {showDatePicker && (
-            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <button
-                    onClick={handlePreviousMonth}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 19l-7-7 7-7"
-                      />
-                    </svg>
-                  </button>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      {currentDate.toLocaleString("en-US", { month: "long" })}
-                    </span>
-                    <select
-                      value={selectedYear}
-                      onChange={handleYearChange}
-                      className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
-                    >
-                      {generateYearOptions().map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleNextMonth}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  {selectingFrom ? "Select Start Date" : "Select End Date"}
-                </p>
-                <div className="flex space-x-2 text-xs">
-                  <span
-                    className={`px-2 py-1 rounded ${
-                      fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    From: {fromDate ? formatDate(fromDate) : "Not selected"}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded ${
-                      toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    To: {toDate ? formatDate(toDate) : "Not selected"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                  <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                    {day}
-                  </div>
-                ))}
-                {generateCalendarDays().map((date, index) => {
-                  const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
-                  const isToday = date.toISOString().split("T")[0] === new Date("2025-09-23T00:00:00Z").toISOString().split("T")[0];
-                  const isSelected = isDateSelected(date);
-                  const isInRange = isDateInRange(date);
-                  const dateStr = date.toISOString().split("T")[0];
-
-                  return (
-                    <button
-                      key={index}
-                      onClick={() => handleDateSelect(dateStr)}
-                      className={`
-                        text-sm py-2 hover:bg-blue-50 rounded transition-colors
-                        ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
-                        ${isToday ? "font-bold text-blue-600" : ""}
-                        ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
-                        ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
-                      `}
-                    >
-                      {date.getUTCDate()}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-between items-center pt-2 border-t">
+          <div className="relative" ref={datePickerRef}>
+            <div
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+            >
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
+                {getDateRangeText()}
+              </span>
+              {(fromDate || toDate) && (
                 <button
-                  onClick={clearDates}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    if (fromDate && !toDate) {
-                      setToDate(fromDate); // Set toDate to fromDate for single date filter
-                    }
-                    setSelectingFrom(true);
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearDates();
                   }}
-                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  Done
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
                 </button>
-              </div>
+              )}
             </div>
-          )}
+
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={handlePreviousMonth}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {currentDate.toLocaleString("en-US", { month: "long" })}
+                      </span>
+                      <select
+                        value={selectedYear}
+                        onChange={handleYearChange}
+                        className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
+                      >
+                        {generateYearOptions().map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleNextMonth}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    {selectingFrom ? "Select Start Date" : "Select End Date"}
+                  </p>
+                  <div className="flex space-x-2 text-xs">
+                    <span
+                      className={`px-2 py-1 rounded ${
+                        fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded ${
+                        toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      To: {toDate ? formatDate(toDate) : "Not selected"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                    <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                      {day}
+                    </div>
+                  ))}
+                  {generateCalendarDays().map((date, index) => {
+                    const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
+                    const isToday = date.toISOString().split("T")[0] === new Date("2025-10-02T00:00:00Z").toISOString().split("T")[0];
+                    const isSelected = isDateSelected(date);
+                    const isInRange = isDateInRange(date);
+                    const dateStr = date.toISOString().split("T")[0];
+
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleDateSelect(dateStr)}
+                        className={`
+                          text-sm py-2 hover:bg-blue-50 rounded transition-colors
+                          ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                          ${isToday ? "font-bold text-blue-600" : ""}
+                          ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                          ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
+                        `}
+                      >
+                        {date.getUTCDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <button
+                    onClick={clearDates}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDatePicker(false);
+                      if (fromDate && !toDate) {
+                        setToDate(fromDate);
+                      }
+                      setSelectingFrom(true);
+                    }}
+                    className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -628,97 +669,83 @@ const History = () => {
               <th className="px-6 py-3 text-left">PR1</th>
               <th className="px-6 py-3 text-left">Total</th>
               <th className="px-6 py-3 text-left">Date</th>
+              {/* <th className="px-6 py-3 text-left">Status</th> */}
             </tr>
           </thead>
           <tbody>
             {history.length === 0 ? (
               <tr>
-                <td colSpan="9" className="px-6 py-4 text-center text-gray-500 bg-white">
+                <td colSpan="10" className="px-6 py-4 text-center text-gray-500 bg-white">
                   No Call History
                 </td>
               </tr>
             ) : (
-              history.map((record, idx) => (
-                <tr key={idx} className="border-b border-[#E6E6E6]">
-                  <td className="px-6 py-4 bg-white">
-                    <input
-                      type="checkbox"
-                      checked={selectedRecords.includes(record._id)}
-                      onChange={() => handleSelectRecord(record._id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 bg-white">{record.call}</td>
-                  <td className="px-6 py-4 bg-white">{record.clientName}</td>
-                  <td className="px-6 py-4 bg-white">
-                    <div className="flex gap-2 flex-wrap">
-                      {record.services.map((service, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
-                          onClick={() => handleServiceClick(record, service.name)}
-                        >
-                          {service.name}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(record, "REMS:KMS ENROUTE")}
-                  >
-                    {record.rem}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(record, "RPM:KMS UNDER TOW")}
-                  >
-                    {record.rpm}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(record, "PR1:WAITING TIME")}
-                  >
-                    {record.pr1}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
-                    onClick={() => handleTotalClick(record)}
-                  >
-                    ${record.total}
-                  </td>
-                  <td className="px-6 py-4 bg-white">{formatDate(record.date)}</td>
-                </tr>
-              ))
+              history.map((record, idx) => {
+                const displayStatus = record.status.toLowerCase() === "pending" ? "Unverified" : capitalizeFirstLetter(record.status);
+                return (
+                  <tr key={idx} className="border-b border-[#E6E6E6]">
+                    <td className="px-6 py-4 bg-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecords.includes(record._id)}
+                        onChange={() => handleSelectRecord(record._id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td className="px-6 py-4 bg-white">{record.call}</td>
+                    <td className="px-6 py-4 bg-white">{record.clientName}</td>
+                    <td className="px-6 py-4 bg-white">
+                      <div className="flex gap-2 flex-wrap">
+                        {record.services.map((service, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
+                            onClick={() => handleServiceClick(record, service.name)}
+                          >
+                            {service.name}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(record, "REMS:KMS ENROUTE")}
+                    >
+                      {formatValue(record.rem)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(record, "RPM:KMS UNDER TOW")}
+                    >
+                      {formatValue(record.rpm)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(record, "PR1:WAITING TIME")}
+                    >
+                      {formatValue(record.pr1)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleTotalClick(record)}
+                    >
+                      ${formatValue(record.total)}
+                    </td>
+                    <td className="px-6 py-4 bg-white">{formatDate(record.date)}</td>
+                    {/* <td
+                      className="px-6 py-4 bg-white"
+                      style={{
+                        color: record.status.toLowerCase() === "pending" ? "#FFA500" : "#18CC6C",
+                      }}
+                    >
+                      {displayStatus}
+                    </td> */}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
-      </div>
-
-      {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-4 px-4">
-        <div>
-          Showing {history.length} of {totalCalls} calls
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
       </div>
 
       {/* Client Details Modal */}
@@ -772,7 +799,7 @@ const History = () => {
                                   Unit Quantity
                                 </label>
                                 <p className="text-sm text-gray-900">
-                                  {Number(service.unitQuantity || 0).toFixed(2)}{" "}
+                                  {formatValue(Number(service.unitQuantity || 0).toFixed(2))}{" "}
                                   {service.unitType || "unit"}
                                 </p>
                               </div>
@@ -781,19 +808,19 @@ const History = () => {
                                   Base Rate
                                 </label>
                                 <p className="text-sm text-gray-900">
-                                  ${Number(service.baseRate || 0).toFixed(2)}
+                                  ${formatValue(Number(service.baseRate || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
                                 <label className="text-sm text-gray-600 block">HST</label>
                                 <p className="text-sm text-gray-900">
-                                  ${Number(service.hst || 0).toFixed(2)}
+                                  ${formatValue(Number(service.hst || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
                                 <label className="text-sm text-gray-600 block">Total</label>
                                 <p className="text-sm text-[#0078bd]">
-                                  ${Number(service.total || 0).toFixed(2)}
+                                  ${formatValue(Number(service.total || 0).toFixed(2))}
                                 </p>
                               </div>
                             </div>
@@ -805,7 +832,7 @@ const History = () => {
                               Grand Total
                             </label>
                             <p className="text-[22px] font-semibold text-[#0078bd]">
-                              ${Number(selectedClientRecord.total || 0).toFixed(2)}
+                              ${formatValue(Number(selectedClientRecord.total || 0).toFixed(2))}
                             </p>
                           </div>
                         )}

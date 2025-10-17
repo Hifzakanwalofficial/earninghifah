@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { Baseurl } from "../../Config";
 
 const Graph = () => {
   const [chartData, setChartData] = useState([]);
@@ -29,7 +30,7 @@ const Graph = () => {
         if (!token) throw new Error("No authentication token found. Please log in.");
 
         const response = await fetch(
-          "https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress",
+          `${Baseurl}/driver/cycle-progress`,
           {
             method: "GET",
             headers: {

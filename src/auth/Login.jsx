@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react'; // Importing icons for show/hide
 import { toast, ToastContainer } from 'react-toastify'; // Import react-toastify
 import 'react-toastify/dist/ReactToastify.css'; // Import toastify CSS
+import { Baseurl } from '../Config';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -28,8 +29,8 @@ const Login = () => {
     setError(null);
 
     // Define API endpoints
-    const adminLoginUrl = 'https://expensemanager-production-4513.up.railway.app/api/admin/login';
-    const driverLoginUrl = 'https://expensemanager-production-4513.up.railway.app/api/driver/login';
+    const adminLoginUrl = `${Baseurl}/admin/login`;
+    const driverLoginUrl = `${Baseurl}/driver/login`;
 
     try {
       // Try admin login first
@@ -52,7 +53,7 @@ const Login = () => {
         }
 
         localStorage.setItem('authToken', token);
-        toast.success('Admin login successful!'); // Show success toast
+        toast.success('Admin login successful!', { position: "top-right" });
         setFormData({ email: '', password: '' });
         navigate('/admin/list');
         return;
@@ -82,12 +83,12 @@ const Login = () => {
       }
 
       localStorage.setItem('authToken', token);
-      toast.success('Driver login successful!'); // Show success toast
+      toast.success('Driver login successful!', { position: "top-right" });
       setFormData({ email: '', password: '' });
       navigate('/driver/dashboard');
     } catch (error) {
       setError(error.message || 'Failed to log in. Please check your credentials and try again.');
-      toast.error(error.message || 'Failed to log in. Please check your credentials and try again.'); // Show error toast
+      toast.error(error.message || 'Failed to log in. Please check your credentials and try again.', { position: "top-right" });
     } finally {
       setLoading(false);
     }
@@ -147,14 +148,44 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full bg-[#0078BD] text-white p-2 rounded-md hover:bg-blue-800 transition-colors mt-4 disabled:opacity-50 cursor-pointer"
+            className="w-full bg-[#0078BD] robotomedium text-white p-2 rounded-md hover:bg-[#0078BD] transition-colors mt-4 disabled:opacity-50 cursor-pointer flex items-center justify-center"
             disabled={loading}
           >
+            {loading ? (
+              <svg
+                className="animate-spin h-5 w-5 text-white mr-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                ></path>
+              </svg>
+            ) : null}
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
+
+          {/* Register Link */}
+          {/* <p className="text-sm text-center mt-4">
+            Don’t have an account?{" "}
+            <Link to="/register" className="text-[#0078BD] robotomedium hover:underline cursor-pointer">
+              Register
+            </Link>
+          </p> */}
         </form>
       </div>
-      <ToastContainer /> {/* Add ToastContainer for displaying toasts */}
+      <ToastContainer position="top-right" autoClose={2000} />
     </div>
   );
 };

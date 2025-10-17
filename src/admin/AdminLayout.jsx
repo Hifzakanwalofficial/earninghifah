@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Baseurl } from "../Config";
 import {
   FaWpforms,
   FaSignOutAlt,
   FaPlus,
   FaBars,
-  FaTrash,
   FaEye,
   FaEyeSlash,
 } from "react-icons/fa";
@@ -27,14 +27,44 @@ const AdminLayout = () => {
     email: "",
     password: "",
   });
+
   const [clientForm, setClientForm] = useState({
     name: "",
+    hstPercent: "13",
     services: [
-      { name: "", type: "fixed", baseRate: "", hst: "", total: "", freeUnits: "" },
+      { name: "REMS:KMS ENROUTE", baseRate: "", freeUnits: "", isPredefined: true, type: "distance" },
+      { name: "RPM:KMS UNDER TOW", baseRate: "", freeUnits: "", isPredefined: true, type: "distance" },
+      { name: "PR1:WAITING TIME", baseRate: "", unitQuantity: "", isPredefined: true, type: "time" },
     ],
   });
 
   const navigate = useNavigate();
+
+  // Prevent page scrolling when modal is open
+  useEffect(() => {
+    if (isClientModalOpen || isDriverModalOpen || isLogoutModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isClientModalOpen, isDriverModalOpen, isLogoutModalOpen]);
+
+  // Add new service
+  const addNewService = () => {
+    setClientForm({
+      ...clientForm,
+      services: [...clientForm.services, { name: "", baseRate: "", freeUnits: "", unitQuantity: "", isPredefined: false, type: "fixed" }],
+    });
+  };
+
+  // Remove service
+  const removeService = (index) => {
+    const newServices = clientForm.services.filter((_, i) => i !== index);
+    setClientForm({ ...clientForm, services: newServices });
+  };
 
   // Show logout confirmation modal
   const handleLogoutClick = () => {
@@ -62,11 +92,11 @@ const AdminLayout = () => {
     setIsDriverModalOpen(true);
   };
 
+
   // Driver Submit
   const handleDriverSubmit = async (e) => {
     e.preventDefault();
 
-    // Password validation
     if (driverForm.password.length < 8 || driverForm.password.length > 8) {
       toast.error("Password must be exactly 8 characters long.");
       return;
@@ -81,7 +111,7 @@ const AdminLayout = () => {
       }
 
       const response = await fetch(
-        "https://expensemanager-production-4513.up.railway.app/api/admin/driver",
+        `${Baseurl}/admin/driver`,
         {
           method: "POST",
           headers: {
@@ -119,32 +149,57 @@ const AdminLayout = () => {
         return;
       }
 
+      const hstPercent = parseFloat(clientForm.hstPercent);
+      if (isNaN(hstPercent) || hstPercent < 0) {
+        throw new Error("HST Percent must be a valid non-negative number.");
+      }
+
       const servicesWithNumbers = clientForm.services.map((s) => {
         const baseRate = parseFloat(s.baseRate);
-        const hst = parseFloat(s.hst);
-        const total = parseFloat(s.total);
-        const freeUnits = s.freeUnits === "" ? 0 : parseInt(s.freeUnits);
-
-        // Validate non-negative values
-        if (baseRate < 0 || hst < 0 || total < 0 || freeUnits < 0) {
-          throw new Error(
-            "Service fields (baseRate, hst, total, freeUnits) cannot be negative."
-          );
+        if (isNaN(baseRate) || baseRate < 0) {
+          throw new Error("Base Rate must be a valid non-negative number.");
         }
 
-        if (isNaN(baseRate) || isNaN(hst) || isNaN(total)) {
-          throw new Error(
-            "Service fields (baseRate, hst, total) must be valid numbers."
-          );
+        const service = {
+          name: s.name,
+          type: s.type,
+          baseRate,
+          freeUnits: 0,
+          unitQuantity: null,
+        };
+
+        if (s.type === "distance") {
+          const freeUnits = parseInt(s.freeUnits);
+          if (isNaN(freeUnits) || freeUnits < 0) {
+            throw new Error("Free Units must be a valid non-negative number.");
+          }
+          service.freeUnits = freeUnits;
+          service.unitType = "km";
+        } else if (s.type === "time") {
+          const unitQuantity = parseInt(s.unitQuantity);
+          if (isNaN(unitQuantity) || unitQuantity < 0) {
+            throw new Error("Unit Quantity must be a valid non-negative number.");
+          }
+          service.unitQuantity = unitQuantity;
+          service.unitType = "unit";
+        } else if (s.type === "fixed") {
+          const freeUnits = parseInt(s.freeUnits) || 0;
+          const unitQuantity = parseInt(s.unitQuantity) || null;
+          service.freeUnits = freeUnits;
+          service.unitQuantity = unitQuantity;
         }
 
-        return { name: s.name, type: "fixed", baseRate, hst, total, freeUnits };
+        return service;
       });
 
-      const payload = { name: clientForm.name, services: servicesWithNumbers };
+      const payload = {
+        name: clientForm.name,
+        hstPercent,
+        services: servicesWithNumbers,
+      };
 
       const response = await fetch(
-        "https://expensemanager-production-4513.up.railway.app/api/admin/createClient",
+        `${Baseurl}/admin/createClient`,
         {
           method: "POST",
           headers: {
@@ -165,8 +220,11 @@ const AdminLayout = () => {
       toast.success("Client added successfully!");
       setClientForm({
         name: "",
+        hstPercent: "13",
         services: [
-          { name: "", type: "fixed", baseRate: "", hst: "", total: "", freeUnits: "" },
+          { name: "REMS:KMS ENROUTE", baseRate: "", freeUnits: "", isPredefined: true, type: "distance" },
+          { name: "RPM:KMS UNDER TOW", baseRate: "", freeUnits: "", isPredefined: true, type: "distance" },
+          { name: "PR1:WAITING TIME", baseRate: "", unitQuantity: "", isPredefined: true, type: "time" },
         ],
       });
       setIsClientModalOpen(false);
@@ -175,26 +233,18 @@ const AdminLayout = () => {
     }
   };
 
-  const addService = () => {
-    setClientForm({
-      ...clientForm,
-      services: [
-        ...clientForm.services,
-        { name: "", type: "fixed", baseRate: "", hst: "", total: "", freeUnits: "" },
-      ],
-    });
-  };
-
-  const removeService = (index) => {
-    const newServices = [...clientForm.services];
-    newServices.splice(index, 1);
-    setClientForm({ ...clientForm, services: newServices });
-  };
-
   const handleServiceChange = (index, field, value) => {
     const newServices = [...clientForm.services];
     newServices[index][field] = value;
     setClientForm({ ...clientForm, services: newServices });
+  };
+
+  // Function to get label for predefined services
+  const getServiceLabel = (service, index) => {
+    if (service.isPredefined) {
+      return service.name.split(":")[0]; // Extract prefix (REMS, RPM, PR1)
+    }
+    return `Service ${index - 2}`;
   };
 
   return (
@@ -210,7 +260,7 @@ const AdminLayout = () => {
         <div className="flex gap-2 justify-end w-full flex-wrap">
           <button
             className="flex items-center gap-2 bg-[#0078BD] text-white px-3 py-2 rounded-[10px] cursor-pointer text-sm sm:text-base"
-            onClick={openDriverModal} // Updated to use new function
+            onClick={openDriverModal}
           >
             <FaPlus /> Driver
           </button>
@@ -225,8 +275,14 @@ const AdminLayout = () => {
 
       {/* Driver Modal */}
       {isDriverModalOpen && (
-        <div className="fixed inset-0 bg-[#00000071] z-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-[#00000071] z-50 flex items-center justify-center"
+          onClick={() => setIsDriverModalOpen(false)}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-bold mb-4">Add Driver</h2>
             <form onSubmit={handleDriverSubmit}>
               <input
@@ -291,102 +347,143 @@ const AdminLayout = () => {
 
       {/* Client Modal */}
       {isClientModalOpen && (
-        <div className="fixed inset-0 bg-[#00000067] z-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-2xl">
-            <h2 className="text-xl font-bold mb-4">Add Client</h2>
-            <form onSubmit={handleClientSubmit}>
-              <input
-                type="text"
-                placeholder="Client Name"
-                value={clientForm.name}
-                onChange={(e) =>
-                  setClientForm({ ...clientForm, name: e.target.value })
-                }
-                className="p-2 border rounded w-full mb-3"
-                required
-              />
+        <div 
+          className="fixed inset-0 bg-[#00000067] z-50 flex items-center justify-center"
+          onClick={() => setIsClientModalOpen(false)}
+        >
+          <div 
+            className="bg-white rounded-lg w-[800px] max-h-[75vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Fixed Header */}
+            <div className="p-6 border-b sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold">Add Client</h2>
+            </div>
 
-              {clientForm.services.map((service, index) => (
-                <div key={index} className="mb-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      placeholder="Service Name"
-                      value={service.name}
-                      onChange={(e) =>
-                        handleServiceChange(index, "name", e.target.value)
-                      }
-                      className="p-2 border rounded w-full"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Base Rate"
-                      value={service.baseRate}
-                      onChange={(e) =>
-                        handleServiceChange(index, "baseRate", e.target.value)
-                      }
-                      className="p-2 border rounded w-full"
-                      required
-                      step="0.01"
-                      min="0"
-                    />
-                    <input
-                      type="number"
-                      placeholder="HST"
-                      value={service.hst}
-                      onChange={(e) =>
-                        handleServiceChange(index, "hst", e.target.value)
-                      }
-                      className="p-2 border rounded w-full"
-                      required
-                      step="0.01"
-                      min="0"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Total"
-                      value={service.total}
-                      onChange={(e) =>
-                        handleServiceChange(index, "total", e.target.value)
-                      }
-                      className="p-2 border rounded w-full"
-                      required
-                      step="0.01"
-                      min="0"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Free Units/Km"
-                      value={service.freeUnits}
-                      onChange={(e) =>
-                        handleServiceChange(index, "freeUnits", e.target.value)
-                      }
-                      className="p-2 border rounded w-full"
-                      min="0"
-                      step="1"
-                    />
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleClientSubmit}>
+                <label className="block text-[16px] font-medium mb-1" style={{ fontFamily: 'Roboto, sans-serif' }}>
+                  Client Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Client Name"
+                  value={clientForm.name}
+                  onChange={(e) =>
+                    setClientForm({ ...clientForm, name: e.target.value })
+                  }
+                  className="p-2 border rounded w-full mb-3"
+                  required
+                />
+                {clientForm.services.map((service, index) => (
+                  <div key={index} className="mb-3">
+                    <label className="block text-[16px] font-medium mb-1" style={{ fontFamily: 'Roboto, sans-serif' }}>
+                      {getServiceLabel(service, index)}
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="Service Name"
+                        value={service.name}
+                        onChange={(e) =>
+                          handleServiceChange(index, "name", e.target.value)
+                        }
+                        className="p-2 border rounded w-full"
+                        required
+                        readOnly={service.isPredefined}
+                      />
+                      <input
+                        type="number"
+                        placeholder="Base Rate"
+                        value={service.baseRate}
+                        onChange={(e) =>
+                          handleServiceChange(index, "baseRate", e.target.value)
+                        }
+                        className="p-2 border rounded w-full"
+                        required
+                        step="0.01"
+                        min="0"
+                      />
+                      {service.type === "distance" && (
+                        <input
+                          type="number"
+                          placeholder="Free Units/Km"
+                          value={service.freeUnits}
+                          onChange={(e) =>
+                            handleServiceChange(index, "freeUnits", e.target.value)
+                          }
+                          className="p-2 border rounded w-full"
+                          required
+                          step="1"
+                          min="0"
+                        />
+                      )}
+                      {service.type === "time" && (
+                        <input
+                          type="number"
+                          placeholder="Unit Quantity"
+                          value={service.unitQuantity}
+                          onChange={(e) =>
+                            handleServiceChange(index, "unitQuantity", e.target.value)
+                          }
+                          className="p-2 border rounded w-full"
+                          required
+                          step="1"
+                          min="0"
+                        />
+                      )}
+                      {service.type === "fixed" && (
+                        <>
+                          <input
+                            type="number"
+                            placeholder="Free Units"
+                            value={service.freeUnits}
+                            onChange={(e) =>
+                              handleServiceChange(index, "freeUnits", e.target.value)
+                            }
+                            className="p-2 border rounded w-full"
+                            step="1"
+                            min="0"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Unit Quantity"
+                            value={service.unitQuantity}
+                            onChange={(e) =>
+                              handleServiceChange(index, "unitQuantity", e.target.value)
+                            }
+                            className="p-2 border rounded w-full"
+                            step="1"
+                            min="0"
+                          />
+                        </>
+                      )}
+                    </div>
+                    {!service.isPredefined && (
+                      <button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        className="mt-2 text-red-500 hover:text-red-700 text-sm"
+                      >
+                        Remove Service
+                      </button>
+                    )}
                   </div>
-                  {clientForm.services.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeService(index)}
-                      className="text-red-500 mt-2 cursor-pointer"
-                    >
-                      <FaTrash className="w-5 h-5" />
-                    </button>
-                  )}
-                </div>
-              ))}
+                ))}
 
-              <button
-                type="button"
-                onClick={addService}
-                className="px-4 py-2 bg-[#0078BD] text-white rounded mb-4 cursor-pointer"
-              >
-                + Another Service
-              </button>
+                <button
+                  type="button"
+                  onClick={addNewService}
+                  className="flex items-center gap-2 bg-[#0078BD] text-white px-3 py-2 rounded-[10px] cursor-pointer text-sm sm:text-base mb-3"
+                >
+                  <FaPlus /> Add Service
+                </button>
+              </form>
+            </div>
 
+            {/* Fixed Footer */}
+            <div className="p-6 border-t sticky bottom-0 bg-white z-10">
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
@@ -397,20 +494,27 @@ const AdminLayout = () => {
                 </button>
                 <button
                   type="submit"
+                  onClick={handleClientSubmit}
                   className="px-4 py-2 bg-[#0078BD] text-white rounded cursor-pointer"
                 >
                   Add Client
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* Logout Confirmation Modal */}
       {isLogoutModalOpen && (
-        <div className="fixed inset-0 bg-[#00000071] z-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+        <div 
+          className="fixed inset-0 bg-[#00000071] z-50 flex items-center justify-center"
+          onClick={() => setIsLogoutModalOpen(false)}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg w-full max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-xl font-bold mb-4">Confirm Logout</h2>
             <p className="mb-4">Are you sure you want to logout?</p>
             <div className="flex justify-end gap-2">

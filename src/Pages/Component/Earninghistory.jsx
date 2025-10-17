@@ -1,17 +1,143 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Baseurl } from "../../Config";
 
 const Earninghistory = () => {
   const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectingFrom, setSelectingFrom] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date("2025-09-23T00:00:00Z")); // Initialize in UTC
-  const [selectedYear, setSelectedYear] = useState(new Date("2025-09-23T00:00:00Z").getUTCFullYear());
-  const [expandedRows, setExpandedRows] = useState({});
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedYear, setSelectedYear] = useState(new Date().getUTCFullYear());
   const datePickerRef = useRef(null);
+  const [totals, setTotals] = useState({
+    totalCalls: 0,
+    totalSubtotal: 0,
+    totalHst: 0,
+    totalEarnings: 0,
+    totalRemsSubtotal: 0,
+    totalRemsHst: 0,
+    totalRpmSubtotal: 0,
+    totalRpmHst: 0,
+    totalPr1Subtotal: 0,
+    totalPr1Hst: 0,
+    pr1RpmRemsSubtotal: 0,
+    pr1RpmRemsHst: 0,
+    pr1RpmRemsEarnings: 0,
+  });
+
+  // Fetch data from API with token
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setError("No authentication token found. Please log in again.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${Baseurl}/driver/lifetime-progress`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("Unauthorized: Invalid or expired token. Please log in again.");
+        }
+        throw new Error("Failed to fetch data from the API");
+      }
+
+      const apiData = await response.json();
+      console.log("API Response:", apiData); // Debug: Log API response
+
+      // Map API response to the component's data structure
+      const mappedData = apiData.dailyStats.map((stat) => ({
+        rawDate: new Date(stat.date),
+        date: formatDate(stat.date),
+        amount: `$${Number(stat.earnings || 0).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`,
+        earnings: Number(stat.earnings || 0),
+        rems: Number(stat.rems || 0),
+        remsAmount: Number(stat.remsAmount || 0),
+        remsHst: Number(stat.remsHst || 0),
+        remsSubtotal: Number(stat.remsSubtotal || 0),
+        rpm: Number(stat.rpm || 0),
+        rpmAmount: Number(stat.rpmAmount || 0),
+        rpmHst: Number(stat.rpmHst || 0),
+        rpmSubtotal: Number(stat.rpmSubtotal || 0),
+        pr1: Number(stat.pr1 || 0),
+        pr1Amount: Number(stat.pr1Amount || 0),
+        pr1Hst: Number(stat.pr1Hst || 0),
+        pr1Subtotal: Number(stat.pr1Subtotal || 0),
+        calls: Number(stat.calls || 0),
+        hst: Number(stat.hst || 0),
+        subtotal: Number(stat.subtotal || 0),
+      }));
+
+      console.log("Mapped Data:", mappedData); // Debug: Log mapped data
+
+      setData(mappedData);
+      setTotals({
+        totalCalls: Number(apiData.totals?.totalCalls || 0),
+        totalSubtotal: Number(apiData.totals?.totalSubtotal || 0),
+        totalHst: Number(apiData.totals?.totalHst || 0),
+        totalEarnings: Number(apiData.totals?.totalEarnings || 0),
+        totalRemsSubtotal: Number(apiData.totals?.totalRemsSubtotal || 0),
+        totalRemsHst: Number(apiData.totals?.totalRemsHst || 0),
+        totalRpmSubtotal: Number(apiData.totals?.totalRpmSubtotal || 0),
+        totalRpmHst: Number(apiData.totals?.totalRpmHst || 0),
+        totalPr1Subtotal: Number(apiData.totals?.totalPr1Subtotal || 0),
+        totalPr1Hst: Number(apiData.totals?.totalPr1Hst || 0),
+        pr1RpmRemsSubtotal: Number(apiData.totals?.pr1RpmRemsSubtotal || 0),
+        pr1RpmRemsHst: Number(apiData.totals?.pr1RpmRemsHst || 0),
+        pr1RpmRemsEarnings: Number(apiData.totals?.pr1RpmRemsEarnings || 0),
+      });
+
+      // Set filteredData to all data by default
+      setFilteredData(mappedData);
+    } catch (err) {
+      setError(err.message || "An error occurred while fetching data");
+      console.error("Fetch Error:", err); // Debug: Log error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Update filtered data when date range changes
+  useEffect(() => {
+    if (data.length === 0) return;
+
+    let filtered = data;
+    if (fromDate || toDate) {
+      // User-selected range
+      const start = new Date(fromDate + "T00:00:00Z");
+      const end = new Date((toDate || fromDate) + "T23:59:59.999Z");
+      filtered = data.filter((item) => {
+        const itemDate = new Date(item.rawDate);
+        return itemDate >= start && itemDate <= end;
+      });
+    }
+
+    console.log("Filtered Data (Date Range):", filtered); // Debug: Log filtered data
+    setFilteredData(filtered);
+  }, [fromDate, toDate, data]);
 
   // Helper function to check if a date is valid
   const isValidDate = (date) => {
@@ -25,122 +151,9 @@ const Earninghistory = () => {
         setShowDatePicker(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Function to format date for API (YYYY-MM-DD in UTC)
-  const formatDateForAPI = (date) => {
-    if (!date || !isValidDate(date)) return null;
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(date.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
-  // Function to fetch cycle progress data
-  const fetchCycleProgress = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const token = localStorage.getItem("authToken");
-      if (!token) {
-        throw new Error("No authentication token found. Please log in.");
-      }
-
-      // Determine date range in UTC
-      let apiStartDate, apiEndDate;
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0); // Normalize to start of day in UTC
-      if (fromDate && toDate) {
-        apiStartDate = fromDate;
-        apiEndDate = toDate;
-      } else {
-        apiEndDate = formatDateForAPI(today);
-        const startDate = new Date(today);
-        startDate.setUTCDate(today.getUTCDate() - 9); // 10 days including end date
-        apiStartDate = formatDateForAPI(startDate);
-      }
-
-      console.log("API Date Range:", { apiStartDate, apiEndDate });
-
-      const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress?startDate=${apiStartDate}&endDate=${apiEndDate}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP Error: ${response.status}`);
-      }
-
-      const apiData = await response.json();
-      console.log("API Response:", apiData);
-
-      if (!apiData.progress || !Array.isArray(apiData.progress)) {
-        throw new Error("Invalid API response format");
-      }
-
-      // Transform data
-      const transformedData = apiData.progress
-        .filter((item) => {
-          const itemDate = new Date(item.date);
-          if (!isValidDate(itemDate)) return false;
-          const start = fromDate ? new Date(fromDate + "T00:00:00Z") : new Date(apiStartDate + "T00:00:00Z");
-          const end = toDate ? new Date(toDate + "T23:59:59.999Z") : new Date(apiEndDate + "T23:59:59.999Z");
-          return itemDate >= start && itemDate <= end;
-        })
-        .map((item) => ({
-          rawDate: new Date(item.date),
-          date: new Date(item.date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            timeZone: "UTC",
-          }),
-          amount: `$${Number(item.totalEarnings).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-          earnings: Number(item.totalEarnings),
-          calls: item.calls.map((call) => ({
-            id: call._id,
-            client: call.client || "Unknown",
-            totalEarnings: Number(call.totalEarnings || 0),
-            servicesUsed: call.servicesUsed.map((service) => ({
-              name: service.name || "Unknown Service",
-              subtotal: Number(service.subtotal || 0).toFixed(2),
-              hst: Number(service.hst || 0).toFixed(2),
-              total: Number(service.total || 0).toFixed(2),
-              unitQuantity: Number(service.unitQuantity || 0).toFixed(2),
-              unitType: service.unitType || null,
-            })),
-          })),
-        }))
-        .sort((a, b) => b.rawDate - a.rawDate);
-
-      console.log("Transformed Data:", transformedData);
-      setData(transformedData);
-    } catch (err) {
-      console.error("API Error:", err);
-      setError(err.message || "An error occurred while fetching data");
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch data when component mounts or date range changes
-  useEffect(() => {
-    fetchCycleProgress();
-  }, [fromDate, toDate]);
 
   // Date formatting for display
   const formatDate = (dateString) => {
@@ -156,9 +169,8 @@ const Earninghistory = () => {
   };
 
   const getDateRangeText = () => {
-    if (!fromDate && !toDate) return "Select Date Range";
-    if (fromDate && !toDate) return `From ${formatDate(fromDate)}`;
-    if (!fromDate && toDate) return `Until ${formatDate(toDate)}`;
+    if (!fromDate && !toDate) return "All Dates";
+    if (fromDate && !toDate) return `${formatDate(fromDate)}`;
     return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
   };
 
@@ -166,16 +178,10 @@ const Earninghistory = () => {
   const handleDateSelect = (selectedDate) => {
     const selected = new Date(selectedDate + "T00:00:00Z");
     if (!isValidDate(selected)) return;
-
     const selectedDateStr = selectedDate;
-
     if (selectingFrom) {
-      if (toDate && selectedDateStr > toDate) {
-        setFromDate(toDate);
-        setToDate(selectedDateStr);
-      } else {
-        setFromDate(selectedDateStr);
-      }
+      setFromDate(selectedDateStr);
+      setToDate("");
       setSelectingFrom(false);
     } else {
       if (fromDate && selectedDateStr < fromDate) {
@@ -193,25 +199,23 @@ const Earninghistory = () => {
     setFromDate("");
     setToDate("");
     setSelectingFrom(true);
+    // Reset to all data
+    setFilteredData(data);
   };
 
   const generateCalendarDays = () => {
     const currentMonth = currentDate.getUTCMonth();
     const currentYear = currentDate.getUTCFullYear();
-
     const firstDay = new Date(Date.UTC(currentYear, currentMonth, 1));
     const lastDay = new Date(Date.UTC(currentYear, currentMonth + 1, 0));
     const startDate = new Date(firstDay);
     startDate.setUTCDate(startDate.getUTCDate() - firstDay.getUTCDay());
-
     const days = [];
     const tempDate = new Date(startDate);
-
     for (let i = 0; i < 42; i++) {
       days.push(new Date(tempDate));
       tempDate.setUTCDate(tempDate.getUTCDate() + 1);
     }
-
     return days;
   };
 
@@ -230,7 +234,7 @@ const Earninghistory = () => {
   };
 
   const generateYearOptions = () => {
-    const currentYear = new Date("2025-09-23T00:00:00Z").getUTCFullYear();
+    const currentYear = new Date().getUTCFullYear();
     const years = [];
     for (let year = currentYear; year >= currentYear - 5; year--) {
       years.push(year);
@@ -249,13 +253,6 @@ const Earninghistory = () => {
     return dateStr === fromDate || dateStr === toDate;
   };
 
-  const toggleRow = (date) => {
-    setExpandedRows((prev) => ({
-      ...prev,
-      [date]: !prev[date],
-    }));
-  };
-
   // Shimmer Loader
   const TableShimmer = () => (
     <div className="bg-white rounded-[8px] p-5" style={{ boxShadow: "0px 0px 16px #E3EBFC" }}>
@@ -267,15 +264,21 @@ const Earninghistory = () => {
         <div className="w-48 h-10 bg-gray-200 rounded animate-pulse"></div>
       </div>
       <div className="mt-4">
-        <div className="grid grid-cols-3 border-b border-[#E2E8F0] pb-2">
+        <div className="grid grid-cols-6 border-b border-[#E2E8F0] pb-2 h-[56px]">
           <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
           <div className="w-16 h-3 bg-gray-200 rounded animate-pulse mx-auto"></div>
+          <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+          <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
+          <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
           <div className="w-16 h-3 bg-gray-200 rounded animate-pulse ml-auto"></div>
         </div>
         {[...Array(8)].map((_, index) => (
-          <div key={index} className="grid grid-cols-3 py-2 border-b border-[#E2E8F0]">
+          <div key={index} className="grid grid-cols-6 py-2 border-b border-[#E2E8F0] h-[56px]">
             <div className="w-16 h-3 bg-gray-200 rounded animate-pulse"></div>
             <div className="w-12 h-3 bg-gray-200 rounded animate-pulse mx-auto"></div>
+            <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
+            <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
+            <div className="w-12 h-3 bg-gray-200 rounded animate-pulse"></div>
             <div className="w-12 h-3 bg-gray-200 rounded animate-pulse ml-auto"></div>
           </div>
         ))}
@@ -291,15 +294,12 @@ const Earninghistory = () => {
       <div className="flex justify-between items-center mb-4">
         <div>
           <h2 className="text-[#1E293B] text-[16px] font-semibold">Earning History</h2>
-          <p className="text-[#64748B] text-[14px] mt-1">
-            Daily earnings and transactions for the selected date range or last 10 days.
-          </p>
         </div>
 
         {/* Date Range Picker */}
         <div className="relative" ref={datePickerRef}>
           <div
-            onClick={() => setShowDatePicker(!showDatePicker)}
+            onClick={() => setShowDatePicker((prev) => !prev)}
             className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
           >
             <svg
@@ -316,9 +316,7 @@ const Earninghistory = () => {
               />
             </svg>
             <span
-              className={`flex-1 ${
-                !fromDate && !toDate ? "text-gray-400" : "text-gray-700"
-              }`}
+              className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}
             >
               {getDateRangeText()}
             </span>
@@ -394,20 +392,14 @@ const Earninghistory = () => {
                 </p>
                 <div className="flex space-x-2 text-xs">
                   <span
-                    className={`px-2 py-1 rounded ${
-                      fromDate
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
+                    className={`px-2 py-1 rounded ${fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                      }`}
                   >
                     From: {fromDate ? formatDate(fromDate) : "Not selected"}
                   </span>
                   <span
-                    className={`px-2 py-1 rounded ${
-                      toDate
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
+                    className={`px-2 py-1 rounded ${toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                      }`}
                   >
                     To: {toDate ? formatDate(toDate) : "Not selected"}
                   </span>
@@ -425,7 +417,8 @@ const Earninghistory = () => {
                 ))}
                 {generateCalendarDays().map((date, index) => {
                   const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
-                  const isToday = date.toISOString().split("T")[0] === new Date("2025-09-23T00:00:00Z").toISOString().split("T")[0];
+                  const isToday =
+                    date.toISOString().split("T")[0] === new Date().toISOString().split("T")[0];
                   const isSelected = isDateSelected(date);
                   const isInRange = isDateInRange(date);
                   const dateStr = date.toISOString().split("T")[0];
@@ -458,6 +451,9 @@ const Earninghistory = () => {
                 <button
                   onClick={() => {
                     setShowDatePicker(false);
+                    if (fromDate && !toDate) {
+                      setToDate(fromDate);
+                    }
                     setSelectingFrom(true);
                   }}
                   className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
@@ -478,72 +474,54 @@ const Earninghistory = () => {
       )}
 
       {/* Table */}
-      <div className="mt-4">
-        <div className="grid grid-cols-3 text-[14px] font-semibold text-[#475569] border-b border-[#E2E8F0] pb-2">
+      <div className="mt-4 h-[300px] overflow-y-scroll overflow-x-hidden">
+        <div className="grid grid-cols-6 text-[14px] font-semibold text-[#475569] border-b border-[#E2E8F0] pb-2 h-[56px] items-end">
           <p>Date</p>
-          <p className="text-center">Transactions</p>
-          <p className="text-right">Total Earnings</p>
+          <p className="text-center">Calls</p>
+          <p>REMS</p>
+          <p>RPM</p>
+          <p>PR1</p>
+          <p className="text-right pe-5">Earnings</p>
         </div>
 
-        {data.length > 0 ? (
-          data.map((item, index) => (
+        {filteredData.length > 0 ? (
+          filteredData.map((item, index) => (
             <div key={`${item.rawDate.getTime()}-${index}`}>
-              <div className="grid grid-cols-3 text-[14px] text-[#334155] py-2 border-b border-[#E2E8F0] last:border-b-0">
+              <div className="grid grid-cols-6 text-[14px] text-[#334155] py-2 border-b border-[#E2E8F0] h-[56px] items-end">
                 <p>{item.date}</p>
-                <p className="text-center">
-                  {item.calls.length > 0 ? (
-                    <button
-                      onClick={() => toggleRow(item.date)}
-                      className="text-blue-500 hover:text-blue-700"
-                    >
-                      {item.calls.length} {item.calls.length === 1 ? "Transaction" : "Transactions"}
-                    </button>
-                  ) : (
-                    "No Transactions"
-                  )}
+                <p className="text-center">{item.calls > 0 ? item.calls : "-"}</p>
+                <p>
+                  {item.rems === 0
+                    ? "-"
+                    : Number(item.rems).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                 </p>
-                <p className="text-right font-medium">{item.amount}</p>
+                <p>
+                  {item.rpm === 0
+                    ? "-"
+                    : Number(item.rpm).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                </p>
+                <p>
+                  {item.pr1 === 0
+                    ? "-"
+                    : Number(item.pr1).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                </p>
+                <p className="text-right font-medium pe-5">
+                  {item.earnings === 0 ? "-" : item.amount}
+                </p>
               </div>
-              {expandedRows[item.date] && item.calls.length > 0 && (
-                <div className="pl-4 bg-gray-50 border-b border-[#E2E8F0]">
-                  {item.calls.map((call) => (
-                    <div
-                      key={call.id}
-                      className="py-2 px-4 border-t border-gray-200"
-                    >
-                      <p className="text-[14px] font-semibold text-[#1E293B]">
-                        Client: {call.client}
-                      </p>
-                      <p className="text-[12px] text-[#475569]">
-                        Total: ${Number(call.totalEarnings).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                      <div className="mt-2">
-                        <p className="text-[12px] font-medium text-[#475569]">
-                          Services Used:
-                        </p>
-                        {call.servicesUsed.map((service, idx) => (
-                          <div key={idx} className="text-[12px] text-[#334155] ml-2">
-                            <p>
-                              {service.name}: ${Number(service.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (HST: $
-                              {Number(service.hst).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) = $
-                              {Number(service.total).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            {service.unitQuantity > 0 && (
-                              <p className="text-gray-500">
-                                {service.unitQuantity} {service.unitType || "units"}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           ))
         ) : (
-          <div className="text-[14px] text-[#334155] py-4 text-center">
+          <div className="text-[14px] text-[#334155] py-4 text-center h-[56px] items-end">
             {error
               ? "Unable to load data. Please try again."
               : "No earnings data available for the selected date range."}
@@ -551,12 +529,119 @@ const Earninghistory = () => {
         )}
       </div>
 
-      {/* Total Earnings */}
-      {data.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-[#E2E8F0]">
-          <div className="flex justify-between text-[14px] font-semibold text-[#1E293B]">
-            <p>Total Earnings:</p>
-            <p>${data.reduce((sum, item) => sum + item.earnings, 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+      {/* Totals Section */}
+      {filteredData.length > 0 && (
+        <div className="mt-4 pt-4 border-t flex border-[#E2E8F0]">
+          <div className="w-1/2 p-4 border-r botder-[#333333]">
+            <div className="flex justify-between text-[14px] font-semibold text-[#1E293B] border-b border-[#333333] pb-16">
+              <p className="text-[15px]">Total Calls: </p>
+              <p className="text-[15px]">
+                <span>{totals.totalCalls === 0 ? "-" : totals.totalCalls}</span>
+              </p>
+            </div>
+            <div className="flex mt-3 justify-between text-[14px] font-semibold text-[#1E293B]">
+              <p className="text-[15px]">Subtotal:</p>
+              <p className="text-[15px]">
+                {totals.totalSubtotal === 0
+                  ? "-"
+                  : `$${Number(totals.totalSubtotal).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`}
+              </p>
+            </div>
+            <div className="flex py-1 justify-between text-[14px] font-semibold text-[#1E293B]">
+              <p className="text-[15px]">Total HST:</p>
+              <p className="text-[15px]">
+                {totals.totalHst === 0
+                  ? "-"
+                  : `$${Number(totals.totalHst).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`}
+              </p>
+            </div>
+            <div className="flex justify-between text-[14px] font-semibold text-[#1E293B]">
+              <p className="text-[15px]">Total Earnings:</p>
+              <p className="text-[15px]">
+                {totals.totalEarnings === 0
+                  ? "-"
+                  : `$${Number(totals.totalEarnings).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`}
+              </p>
+            </div>
+          </div>
+          <div className="w-1/2 p-4">
+            <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B]">
+              <p>Total REMS:</p>
+              <p>
+                {totals.totalRemsSubtotal === 0
+                  ? "-"
+                  : Number(totals.totalRemsSubtotal).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+              </p>
+            </div>
+            <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B] mt-1">
+              <p>Total RPM:</p>
+              <p>
+                {totals.totalRpmSubtotal === 0
+                  ? "-"
+                  : Number(totals.totalRpmSubtotal).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+              </p>
+            </div>
+            <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B] mt-1">
+              <p>Total PR1:</p>
+              <p>
+                {totals.totalPr1Subtotal === 0
+                  ? "-"
+                  : Number(totals.totalPr1Subtotal).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+              </p>
+            </div>
+            <div className="border-t border-[#333333] mt-4 pt-3">
+              <div className="flex justify-between">
+                <p className="text-[15px] font-semibold text-[#1E293B]">Subtotal:</p>
+                <p className="text-[15px] font-semibold text-[#1E293B]">
+                  {totals.pr1RpmRemsSubtotal === 0
+                    ? "-"
+                    : `$${Number(totals.pr1RpmRemsSubtotal).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+                </p>
+              </div>
+              <div className="flex justify-between mt-1">
+                <p className="text-[15px] font-semibold text-[#1E293B]">HST:</p>
+                <p className="text-[15px] font-semibold text-[#1E293B]">
+                  {totals.pr1RpmRemsHst === 0
+                    ? "-"
+                    : `$${Number(totals.pr1RpmRemsHst).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+                </p>
+              </div>
+              <div className="flex justify-between mt-1">
+                <p className="text-[15px] font-semibold text-[#1E293B]">Total:</p>
+                <p className="text-[15px] font-semibold text-[#1E293B]">
+                  {totals.pr1RpmRemsEarnings === 0
+                    ? "-"
+                    : `$${Number(totals.pr1RpmRemsEarnings).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}

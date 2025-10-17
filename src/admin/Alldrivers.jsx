@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
 import { IoEyeOffOutline } from "react-icons/io5";
+import { Baseurl } from "../Config";
 
 const Alldrivers = () => {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ const Alldrivers = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalDrivers, setTotalDrivers] = useState(0);
+  const [sortBy, setSortBy] = useState("earnings");
+  const [order, setOrder] = useState("desc");
   const limit = 10;
 
   useEffect(() => {
@@ -34,7 +37,7 @@ const Alldrivers = () => {
 
       try {
         const res = await fetch(
-          `https://expensemanager-production-4513.up.railway.app/api/admin/drivers?page=${currentPage}&limit=${limit}`,
+          `${Baseurl}/admin/drivers?page=${currentPage}&limit=${limit}&sortBy=${sortBy}&order=${order}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -58,7 +61,7 @@ const Alldrivers = () => {
           fetchedDrivers.map(async (driver) => {
             try {
               const res = await fetch(
-                `https://expensemanager-production-4513.up.railway.app/api/admin/calls-for-driver-by/${driver._id}`,
+                `${Baseurl}/admin/calls-for-driver-by/${driver._id}`,
                 {
                   headers: {
                     Authorization: `Bearer ${token}`,
@@ -82,7 +85,16 @@ const Alldrivers = () => {
     };
 
     fetchDrivers();
-  }, [currentPage]);
+  }, [currentPage, sortBy, order]);
+
+  const handleSortChange = (e) => {
+    const [newSortBy, newOrder] = e.target.value.split("-");
+    setSortBy(newSortBy);
+    setOrder(newOrder);
+    setCurrentPage(1);
+    setSelectedDrivers([]);
+    setSelectAll(false);
+  };
 
   const handleDriverClick = (driverId) => {
     navigate(`/admin/callhistory/${driverId}`);
@@ -121,7 +133,7 @@ const Alldrivers = () => {
 
     try {
       const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/admin/deleteDrivers`,
+        `${Baseurl}/admin/deleteDrivers`,
         {
           method: "DELETE",
           headers: {
@@ -165,7 +177,7 @@ const Alldrivers = () => {
 
     try {
       const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/admin/updateDriver/${selectedDriver._id}`,
+        `${Baseurl}/admin/updateDriver/${selectedDriver._id}`,
         {
           method: "PUT",
           headers: {
@@ -217,6 +229,34 @@ const Alldrivers = () => {
 
   return (
     <div className="relative">
+      {/* Sorting Dropdown */}
+<div className="relative flex justify-end p-3">
+  <div className="relative">
+    <select
+      value={`${sortBy}-${order}`}
+      onChange={handleSortChange}
+      className="appearance-none cursor-pointer bg-white border border-gray-300 text-gray-700 rounded-md px-4 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#0078BD] focus:border-[#0078BD] transition duration-150 ease-in-out"
+    >
+      <option value="earnings-desc">Max Earnings</option>
+      <option value="earnings-asc">Min Earnings</option>
+      <option value="calls-desc">Max Calls</option>
+      <option value="calls-asc">Min Calls</option>
+    </select>
+
+    {/* Custom dropdown arrow */}
+    <svg
+      className="w-4 h-4 text-[#0078BD] absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+</div>
+
+
       {/* Action Buttons (Delete/Cancel) */}
       {selectedDrivers.length > 0 && (
         <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">

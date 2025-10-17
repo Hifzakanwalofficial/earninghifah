@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { RiDragMove2Fill } from "react-icons/ri";
 import { Resizable } from "react-resizable"; // Import Resizable component
+import { Baseurl } from "../../Config";
 
 const Linechart = () => {
   const [data, setData] = useState([]);
@@ -19,11 +20,11 @@ const Linechart = () => {
   const [size, setSize] = useState({ width: 0, height: 600 }); // Initial width will be set in useEffect
   const containerRef = useRef(null); // Ref to get parent container width
 
-  // Calculate initial width (40% of parent) on mount
+  // Calculate initial width (60% of parent) on mount
   useEffect(() => {
     if (containerRef.current) {
       const parentWidth = containerRef.current.parentElement.offsetWidth || 1000; // Fallback to 1000px if no parent width
-      setSize({ width: parentWidth * 0.4, height: 600 }); // 40% of parent width
+      setSize({ width: parentWidth * 0.49, height: 600 }); // 60% of parent width
     }
   }, []);
 
@@ -39,7 +40,7 @@ const Linechart = () => {
         }
 
         const response = await fetch(
-          "https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress",
+          `${Baseurl}/driver/cycle-progress`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -160,17 +161,17 @@ const Linechart = () => {
   }
 
   return (
-    <Resizable
-      width={size.width}
-      height={size.height}
-      onResize={onResize}
-      minConstraints={[300, 300]} // Minimum width and height
-      maxConstraints={[1500, 800]} // Maximum width and height
-      handle={resizeHandle} // Use custom Tailwind-styled handle
-    >
+    // <Resizable
+    //   width={size.width}
+    //   height={size.height}
+    //   onResize={onResize}
+    //   minConstraints={[300, 300]}
+    //   maxConstraints={[1500, 800]} 
+    //   handle={resizeHandle} 
+    // >
       <div
         ref={containerRef}
-        className="bg-white p-4 rounded-xl shadow outline-none focus:outline-none relative"
+        className="bg-white p-4 rounded-xl w-full shadow outline-none focus:outline-none relative"
         style={{ width: size.width, height: size.height }}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -189,7 +190,7 @@ const Linechart = () => {
               type="monotone"
               dataKey="totalCalls"
               name="Total Calls"
-              stroke="#2563EB" // blue
+              stroke="#2563EB"
               strokeWidth={2}
               dot={{ r: 4, stroke: "#2563EB", strokeWidth: 2, fill: "white" }}
               activeDot={{ r: 6 }}
@@ -200,7 +201,7 @@ const Linechart = () => {
               type="monotone"
               dataKey="rems"
               name="REMS Earnings"
-              stroke="#16A34A" // green
+              stroke="#16A34A"
               strokeWidth={2}
               dot={{ r: 4, stroke: "#16A34A", strokeWidth: 2, fill: "white" }}
               activeDot={{ r: 6 }}
@@ -211,7 +212,7 @@ const Linechart = () => {
               type="monotone"
               dataKey="rpm"
               name="RPM Earnings"
-              stroke="#9333EA" // purple
+              stroke="#9333EA"
               strokeWidth={2}
               dot={{ r: 4, stroke: "#9333EA", strokeWidth: 2, fill: "white" }}
               activeDot={{ r: 6 }}
@@ -222,7 +223,7 @@ const Linechart = () => {
               type="monotone"
               dataKey="pr1"
               name="PR1 Earnings"
-              stroke="#DC2626" // red
+              stroke="#DC2626"
               strokeWidth={2}
               dot={{ r: 4, stroke: "#DC2626", strokeWidth: 2, fill: "white" }}
               activeDot={{ r: 6 }}
@@ -230,7 +231,7 @@ const Linechart = () => {
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </Resizable> 
+    // </Resizable> 
   );
 };
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate for redirect
+import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaTimes } from 'react-icons/fa';
+import { Baseurl } from "../Config";
 
 const Form = () => {
   const [callNumber, setCallNumber] = useState('');
@@ -16,7 +17,14 @@ const Form = () => {
   const [currentServices, setCurrentServices] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedCall, setSubmittedCall] = useState(null);
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [servicesTotal, setServicesTotal] = useState(0);
+  const [remsCalc, setRemsCalc] = useState({ subtotal: 0, hst: 0, total: 0 });
+  const [rpmCalc, setRpmCalc] = useState({ subtotal: 0, hst: 0, total: 0 });
+  const [pr1Calc, setPr1Calc] = useState({ subtotal: 0, hst: 0, total: 0, blocks: 0 });
+
+  const navigate = useNavigate();
+  const HST_RATE = 0.13;
+  const PR1_BLOCK_SIZE = 31; // Block size for PR1:WAITING TIME
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -25,7 +33,7 @@ const Form = () => {
       return;
     }
 
-    fetch('https://expensemanager-production-4513.up.railway.app/api/common/getAllClients', {
+    fetch(`${Baseurl}/common/getAllClients`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
@@ -51,11 +59,7 @@ const Form = () => {
     const client = clients.find(c => c._id === id);
     const filteredServices = client 
       ? client.services.filter(service => 
-          ![
-            "REMS:KMS ENROUTE",
-            "RPM:KMS UNDER TOW",
-            "PR1:WAITING TIME"
-          ].includes(service.name)
+          !["REMS:KMS ENROUTE", "RPM:KMS UNDER TOW", "PR1:WAITING TIME"].includes(service.name)
         )
       : [];
     setCurrentServices(filteredServices);
@@ -64,6 +68,66 @@ const Form = () => {
     setRpm('');
     setPr1('');
   };
+
+  const calculateService = (serviceName, quantity = 1) => {
+    const client = clients.find(c => c._id === selectedClientId);
+    if (!client) return { subtotal: 0, hst: 0, total: 0, blocks: 0 };
+
+    const service = client.services.find(s => s.name === serviceName);
+    if (!service || !quantity || isNaN(quantity) || Number(quantity) <= 0) {
+      return { subtotal: 0, hst: 0, total: 0, blocks: 0 };
+    }
+
+    const freeUnits = service.freeUnits || 0;
+    let chargeableUnits = service.type === 'fixed' ? 1 : Math.max(0, Number(quantity) - freeUnits);
+    let blocks = 0;
+
+    if (serviceName === 'PR1:WAITING TIME') {
+      blocks = Math.floor(Number(quantity) / PR1_BLOCK_SIZE);
+      chargeableUnits = blocks;
+    }
+
+    const subtotal = chargeableUnits * service.baseRate;
+    const hst = subtotal * HST_RATE;
+    const total = subtotal + hst;
+    return { 
+      subtotal: parseFloat(subtotal.toFixed(2)), 
+      hst: parseFloat(hst.toFixed(2)), 
+      total: parseFloat(total.toFixed(2)),
+      blocks
+    };
+  };
+
+  useEffect(() => {
+    if (!selectedClientId) {
+      setRemsCalc({ subtotal: 0, hst: 0, total: 0 });
+      setRpmCalc({ subtotal: 0, hst: 0, total: 0 });
+      setPr1Calc({ subtotal: 0, hst: 0, total: 0, blocks: 0 });
+      setServicesTotal(0);
+      return;
+    }
+
+    // Calculate REMS, RPM, PR1 dynamically
+    const remsResult = calculateService('REMS:KMS ENROUTE', rems);
+    const rpmResult = calculateService('RPM:KMS UNDER TOW', rpm);
+    const pr1Result = calculateService('PR1:WAITING TIME', pr1);
+
+    setRemsCalc(remsResult);
+    setRpmCalc(rpmResult);
+    setPr1Calc(pr1Result);
+
+    // Calculate total for selected services
+    const servicesSum = selectedServiceIds.reduce((sum, serviceId) => {
+      const service = currentServices.find(s => s._id === serviceId);
+      if (!service) return sum;
+      const calc = calculateService(service.name);
+      return sum + calc.total;
+    }, 0);
+
+    // Add REMS, RPM, PR1 totals
+    const grandTotal = servicesSum + remsResult.total + rpmResult.total + pr1Result.total;
+    setServicesTotal(grandTotal.toFixed(2));
+  }, [selectedServiceIds, currentServices, rems, rpm, pr1, selectedClientId, clients]);
 
   const handleServiceChange = (e) => {
     const id = e.target.value;
@@ -120,7 +184,7 @@ const Form = () => {
 
     try {
       console.log('Submitting payload:', JSON.stringify(body, null, 2));
-      const res = await fetch('https://expensemanager-production-4513.up.railway.app/api/driver/submitCall', {
+      const res = await fetch(`${Baseurl}/driver/submitCall`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +200,7 @@ const Form = () => {
         toast.success('Call submitted successfully!');
         setSubmittedCall(responseData.call);
         handleReset();
-        navigate('/driver/callrecord'); // Redirect to /driver/callrecord
+        navigate('/driver/callrecord');
       } else {
         toast.error(responseData.message || 'Error submitting call');
         console.error('Submission error:', responseData);
@@ -159,17 +223,26 @@ const Form = () => {
     setDate(new Date().toISOString().split('T')[0]);
     setCurrentServices([]);
     setSubmittedCall(null);
+    setServicesTotal(0);
+    setRemsCalc({ subtotal: 0, hst: 0, total: 0 });
+    setRpmCalc({ subtotal: 0, hst: 0, total: 0 });
+    setPr1Calc({ subtotal: 0, hst: 0, total: 0, blocks: 0 });
   };
 
   return (
-    <>
+    <div className="p-6">
       <div
         className="bg-white rounded-[8px] p-3 sm:p-6 md:p-8 lg:p-[62px] w-[100%] mx-auto mt-10"
         style={{ boxShadow: "0px 0px 16px #E3EBFC" }}
       >
-        <h2 className="text-[#1E293B] text-[16px] sm:text-xl md:text-[24px] font-semibold mb-3 sm:mb-6">
-          Input call details
-        </h2>
+        <div className="flex justify-between items-center mb-3 sm:mb-6">
+          <h2 className="text-[#1E293B] text-[16px] sm:text-xl md:text-[24px] font-semibold">
+            Input call details
+          </h2>
+          <p className="text-[#0078bd] text-[14px] sm:text-[16px] font-semibold">
+            Total: ${servicesTotal}
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6">
           <div>
@@ -242,12 +315,16 @@ const Form = () => {
               <div className="mt-2 flex gap-2 flex-wrap">
                 {selectedServiceIds.map((serviceId) => {
                   const service = currentServices.find(s => s._id === serviceId);
+                  const calc = service ? calculateService(service.name) : { subtotal: 0, hst: 0, total: 0 };
                   return (
                     <div
                       key={serviceId}
                       className="flex items-center text-[13px] text-[#555555] bg-white border border-[#DADDE2] rounded-full px-2.5 py-0.5"
                     >
-                      <span>{service?.name || 'Unknown'}</span>
+                      <span>
+                        {service?.name || 'Unknown'} 
+                        <span className="text-[#0078bd] robotosemibold"> ${calc.total}</span>
+                      </span>
                       <button
                         onClick={() => handleRemoveService(serviceId)}
                         className="ml-2 text-[#555555] hover:text-[#333333] focus:outline-none cursor-pointer"
@@ -263,7 +340,9 @@ const Form = () => {
           </div>
 
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rems (Kms Enroute)</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">
+              Rems (Kms Enroute)
+            </label>
             <input
               type="number"
               value={rems}
@@ -271,12 +350,20 @@ const Form = () => {
               placeholder="Enter Kms Enroute"
               min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedClientId}
             />
+            {remsCalc.total > 0 && (
+              <div className="mt-2 text-[10px] sm:text-[12px] text-[#555555]">
+              
+                <p className="text-[#0078BD] robotosemibold">${remsCalc.total.toFixed(2)}</p>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Rpm (Kms Under Tow)</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">
+              Rpm (Kms Under Tow)
+            </label>
             <input
               type="number"
               value={rpm}
@@ -284,21 +371,38 @@ const Form = () => {
               placeholder="Enter Kms Under Tow"
               min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedClientId}
             />
+            {rpmCalc.total > 0 && (
+              <div className="mt-2 text-[10px] sm:text-[12px] text-[#555555]">
+                {/* <p>Subtotal: ${rpmCalc.subtotal.toFixed(2)}</p>
+                <p>HST: ${rpmCalc.hst.toFixed(2)}</p> */}
+                <p className="text-[#0078BD] robotosemibold"> ${rpmCalc.total.toFixed(2)}</p>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">Pr1 (Waiting Time)</label>
+            <label className="block text-[#1E293B] text-[11px] sm:text-[14px] robotomedium mb-1 sm:mb-2">
+              Pr1 (Waiting Time in Minutes)
+            </label>
             <input
               type="number"
               value={pr1}
               onChange={(e) => setPr1(e.target.value)}
-              placeholder="Enter Waiting Time"
+              placeholder="Enter Waiting Time (minutes)"
               min="0"
               className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !selectedClientId}
             />
+            {pr1Calc.total > 0 && (
+              <div className="mt-2 text-[10px] sm:text-[12px] text-[#555555]">
+                {/* <p>Blocks: {pr1Calc.blocks} (31 minutes each)</p>
+                <p>Subtotal: ${pr1Calc.subtotal.toFixed(2)}</p>
+                <p>HST: ${pr1Calc.hst.toFixed(2)}</p> */}
+                <p className="text-[#0078BD] robotosemibold"> ${pr1Calc.total.toFixed(2)}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -385,7 +489,7 @@ const Form = () => {
         pauseOnHover
         theme="light"
       />
-    </>
+    </div>
   );
 };
 

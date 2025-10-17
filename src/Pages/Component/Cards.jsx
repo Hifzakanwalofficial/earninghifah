@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BsArrowUpRight } from 'react-icons/bs';
+import { Baseurl } from '../../Config';
 
 const Cards = () => {
   const [monthlyData, setMonthlyData] = useState({
@@ -26,7 +27,7 @@ const Cards = () => {
         }
 
         // Fetch monthly comparison data (for the first card)
-        const monthlyResponse = await fetch('https://expensemanager-production-4513.up.railway.app/api/driver/monthly-comparison', {
+        const monthlyResponse = await fetch(`${Baseurl}/driver/monthly-comparison`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -42,7 +43,7 @@ const Cards = () => {
         const monthlyData = await monthlyResponse.json();
 
         // Fetch cycle progress data (for the second card and earnings)
-        const cycleResponse = await fetch('https://expensemanager-production-4513.up.railway.app/api/driver/cycle-progress', {
+        const cycleResponse = await fetch(`${Baseurl}/driver/cycle-progress`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -117,52 +118,52 @@ const Cards = () => {
   };
 
   // Shimmer Animation Component
-  const ShimmerCard = ({ isLeftCard = false }) => (
-    <div className={`w-1/2 px-[14px] py-[22px] rounded-[8px] ${isLeftCard ? 'bg-[#0078BD]' : 'bg-white'}`}
-      style={!isLeftCard ? { boxShadow: '0px 0px 16px #E3EBFC' } : {}}
-    >
-      {isLeftCard ? (
-        // Left Card Shimmer
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="w-32 h-5 bg-white/20 rounded animate-pulse mb-3"></div>
-            <div className="w-40 h-4 bg-white/20 rounded animate-pulse mb-3"></div>
-            <div className="w-28 h-4 bg-white/20 rounded animate-pulse"></div>
-          </div>
-          <div className="w-20 h-8 bg-white/20 rounded animate-pulse"></div>
-        </div>
-      ) : (
-        // Right Card Shimmer
-        <div>
-          <div className="w-48 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-56 h-4 bg-gray-200 rounded animate-pulse"></div>
-            <div className="w-16 h-5 bg-gray-200 rounded animate-pulse"></div>
-          </div>
-          <div className="w-full bg-gray-200 h-[6px] rounded-full mb-2 animate-pulse"></div>
-          <div className="w-44 h-4 bg-gray-200 rounded animate-pulse"></div>
-        </div>
-      )}
-    </div>
-  );
+  // const ShimmerCard = ({ isLeftCard = false }) => (
+  //   <div className={`w-1/2 px-[14px] py-[22px] rounded-[8px] ${isLeftCard ? 'bg-[#0078BD]' : 'bg-white'}`}
+  //     style={!isLeftCard ? { boxShadow: '0px 0px 16px #E3EBFC' } : {}}
+  //   >
+  //     {isLeftCard ? (
+  //       // Left Card Shimmer
+  //       <div className="flex items-center justify-between">
+  //         <div>
+  //           <div className="w-32 h-5 bg-white/20 rounded animate-pulse mb-3"></div>
+  //           <div className="w-40 h-4 bg-white/20 rounded animate-pulse mb-3"></div>
+  //           <div className="w-28 h-4 bg-white/20 rounded animate-pulse"></div>
+  //         </div>
+  //         <div className="w-20 h-8 bg-white/20 rounded animate-pulse"></div>
+  //       </div>
+  //     ) : (
+  //       // Right Card Shimmer
+  //       <div>
+  //         <div className="w-48 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
+  //         <div className="flex items-center justify-between mb-3">
+  //           <div className="w-56 h-4 bg-gray-200 rounded animate-pulse"></div>
+  //           <div className="w-16 h-5 bg-gray-200 rounded animate-pulse"></div>
+  //         </div>
+  //         <div className="w-full bg-gray-200 h-[6px] rounded-full mb-2 animate-pulse"></div>
+  //         <div className="w-44 h-4 bg-gray-200 rounded animate-pulse"></div>
+  //       </div>
+  //     )}
+  //   </div>
+  // );
 
-  if (loading) {
-    return (
-      <div className="flex gap-4 mb-[32px]">
-        <ShimmerCard isLeftCard={true} />
-        <ShimmerCard isLeftCard={false} />
-      </div>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <div className="flex gap-4 mb-[32px]">
+  //       <ShimmerCard isLeftCard={true} />
+  //       <ShimmerCard isLeftCard={false} />
+  //     </div>
+  //   );
+  // }
 
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
+  // if (error) {
+  //   return <div>Error: {error}</div>;
+  // }
 
   return (
     <div className="flex gap-4 mb-[32px]">
       {/* Left Card (Total Earnings) */}
-      <div className="w-1/2 bg-[#0078BD] px-[14px] py-[22px] rounded-[8px] flex items-center justify-between">
+      {/* <div className="w-1/2 bg-[#0078BD] px-[14px] py-[22px] rounded-[8px] flex items-center justify-between">
         <div>
           <p className="text-white robotomedium text-[20px]">Total Earnings</p>
           <p className="text-white robotomedium text-[14px] my-[14px]">
@@ -173,7 +174,7 @@ const Cards = () => {
           </p>
         </div>
         <div className="robotobold text-white text-[32px]">${cycleData.totalEarnings.toFixed(2)}</div>
-      </div>
+      </div> */}
 
       {/* Right Card (Cycle Earnings Summary) */}
       <div

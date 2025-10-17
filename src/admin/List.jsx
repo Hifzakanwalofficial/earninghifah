@@ -3,6 +3,7 @@ import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import ClientsTable from '../Pages/Component/ClientsTable';
 import { useNavigate } from 'react-router-dom';
 import StatsCards from './StatsCards';
+import { Baseurl } from '../Config';
 
 const List = () => {
   const [error, setError] = useState(null);
@@ -30,7 +31,7 @@ const List = () => {
       setLoading(true);
       setError(null);
       const response = await fetch(
-        'https://expensemanager-production-4513.up.railway.app/api/admin/drivers?page=1&limit=10',
+        `${Baseurl}/admin/drivers?page=1&limit=10`,
         {
           method: 'GET',
           headers: {

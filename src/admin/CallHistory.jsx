@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { FaChevronDown } from "react-icons/fa";
+import { Baseurl } from "../Config";
 
 const CallHistory = () => {
   const { driverId } = useParams();
@@ -12,8 +14,9 @@ const CallHistory = () => {
   const [toDate, setToDate] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectingFrom, setSelectingFrom] = useState(true);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [currentDate, setCurrentDate] = useState(new Date("2025-10-06T13:01:00Z"));
+  const [selectedYear, setSelectedYear] = useState(new Date("2025-10-06T13:01:00Z").getUTCFullYear());
+  const datePickerRef = useRef(null);
   const [selectedCalls, setSelectedCalls] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -21,13 +24,29 @@ const CallHistory = () => {
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClientRecord, setSelectedClientRecord] = useState(null);
   const [selectedServiceName, setSelectedServiceName] = useState(null);
-  const datePickerRef = useRef(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(null);
+  const [activeTab, setActiveTab] = useState("All"); // New state for active tab
 
-  // Close date picker when clicking outside
+  // Helper function to check if a date is valid
+  const isValidDate = (date) => {
+    return date instanceof Date && !isNaN(date);
+  };
+
+  // Helper function to capitalize the first letter of a string
+  const capitalizeFirstLetter = (string) => {
+    if (!string) return "";
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+  };
+
+  // Close date picker and status dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
         setShowDatePicker(false);
+      }
+      if (!event.target.closest('.status-dropdown')) {
+        setShowStatusDropdown(null);
       }
     };
 
@@ -37,27 +56,59 @@ const CallHistory = () => {
     };
   }, []);
 
-  // Filter calls based on date range
+  // Filter calls based on date range, search query, and active tab
   useEffect(() => {
-    if (!fromDate && !toDate) {
-      setCalls(allCalls);
-      return;
+    let filtered = allCalls;
+
+    // Apply tab filter
+    if (activeTab === "Verified") {
+      filtered = filtered.filter((call) => call.status.toLowerCase() === "verified");
+    } else if (activeTab === "Unverified") {
+      filtered = filtered.filter((call) =>
+        call.status.toLowerCase() === "unverified" || call.status.toLowerCase() === "pending"
+      );
     }
 
-    let filtered = allCalls;
-    if (fromDate && toDate) {
-      const from = new Date(fromDate);
-      const to = new Date(toDate);
-      filtered = allCalls.filter((call) => {
-        if (call.date) {
-          const callDate = new Date(call.date);
-          return callDate >= from && callDate <= to;
-        }
-        return true;
-      });
+    // Apply date range filter
+    if (fromDate || toDate) {
+      if (fromDate && toDate) {
+        // Range filter
+        const from = new Date(fromDate + "T00:00:00Z");
+        const to = new Date(toDate + "T23:59:59.999Z");
+        filtered = filtered.filter((call) => {
+          if (call.date) {
+            const callDate = new Date(call.date);
+            return isValidDate(callDate) && callDate >= from && callDate <= to;
+          }
+          return false;
+        });
+      } else if (fromDate) {
+        // Single date filter
+        const from = new Date(fromDate + "T00:00:00Z");
+        const to = new Date(fromDate + "T23:59:59.999Z");
+        filtered = filtered.filter((call) => {
+          if (call.date) {
+            const callDate = new Date(call.date);
+            return isValidDate(callDate) && callDate >= from && callDate <= to;
+          }
+          return false;
+        });
+      }
     }
+
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter((call) =>
+        call.clientName.toLowerCase().includes(query) ||
+        call.call.toLowerCase().includes(query)
+      );
+    }
+
+    // Set calls to filtered records
     setCalls(filtered);
-  }, [allCalls, fromDate, toDate]);
+    setSelectAll(selectedCalls.length === filtered.length && filtered.length > 0);
+  }, [allCalls, fromDate, toDate, searchQuery, activeTab, selectedCalls]);
 
   // Fetch call history data
   useEffect(() => {
@@ -69,7 +120,7 @@ const CallHistory = () => {
     }
 
     fetch(
-      `https://expensemanager-production-4513.up.railway.app/api/admin/calls-for-driver-by/${driverId}`,
+      `${Baseurl}/admin/calls-for-driver-by/${driverId}`,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -155,12 +206,51 @@ const CallHistory = () => {
       });
   }, [driverId]);
 
+  // Update call status
+  const handleUpdateStatus = async (callId, newStatus) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${Baseurl}/admin/update-call-status/${callId}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update status");
+      }
+
+      // Update local state
+      setAllCalls((prev) =>
+        prev.map((call) =>
+          call._id === callId ? { ...call, status: newStatus } : call
+        )
+      );
+      setShowStatusDropdown(null); // Close dropdown after update
+    } catch (err) {
+      console.error("Error updating status:", err);
+    }
+  };
+
   // Checkbox handling
   const handleSelectCall = (id) => {
-    setSelectedCalls((prev) =>
-      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
-    );
-    setSelectAll(calls.length > 0 && selectedCalls.length + 1 === calls.length);
+    setSelectedCalls((prev) => {
+      const newSelected = prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id];
+      setSelectAll(newSelected.length === calls.length && calls.length > 0);
+      return newSelected;
+    });
   };
 
   const handleSelectAll = () => {
@@ -178,15 +268,6 @@ const CallHistory = () => {
     setSelectAll(false);
   };
 
-  // Update selectAll state when calls or selectedCalls change
-  useEffect(() => {
-    if (calls.length > 0) {
-      setSelectAll(selectedCalls.length === calls.length);
-    } else {
-      setSelectAll(false);
-    }
-  }, [selectedCalls, calls]);
-
   // Delete handling
   const handleDelete = async () => {
     setDeleteLoading(true);
@@ -199,7 +280,7 @@ const CallHistory = () => {
 
     try {
       const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/admin/deleteCalls/${driverId}`,
+        `${Baseurl}/admin/deleteCalls/${driverId}`,
         {
           method: "DELETE",
           headers: {
@@ -240,37 +321,41 @@ const CallHistory = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return "";
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
+    if (!isValidDate(date)) return "N/A";
+
     return date.toLocaleDateString("en-US", {
       year: "numeric",
-      month: "numeric",
-      day: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      timeZone: "UTC",
     });
   };
 
   const getDateRangeText = () => {
     if (!fromDate && !toDate) return "Select Date Range";
-    if (fromDate && !toDate) return `From ${formatDate(fromDate)}`;
-    if (!fromDate && toDate) return `Until ${formatDate(toDate)}`;
+    if (fromDate && !toDate) return `${formatDate(fromDate)}`;
+    if (!fromDate && toDate) return `${formatDate(toDate)}`;
     return `${formatDate(fromDate)} - ${formatDate(toDate)}`;
   };
 
   const handleDateSelect = (selectedDate) => {
+    const selected = new Date(selectedDate + "T00:00:00Z");
+    if (!isValidDate(selected)) return;
+
+    const selectedDateStr = selected.toISOString().split("T")[0];
+
     if (selectingFrom) {
-      if (toDate && new Date(selectedDate) > new Date(toDate)) {
-        setFromDate(toDate);
-        setToDate(selectedDate);
-      } else {
-        setFromDate(selectedDate);
-      }
+      setFromDate(selectedDateStr);
+      setToDate("");
       setSelectingFrom(false);
     } else {
-      if (fromDate && new Date(selectedDate) < new Date(fromDate)) {
+      if (fromDate && selectedDateStr < fromDate) {
         setToDate(fromDate);
-        setFromDate(selectedDate);
+        setFromDate(selectedDateStr);
       } else {
-        setToDate(selectedDate);
+        setToDate(selectedDateStr);
       }
       setShowDatePicker(false);
       setSelectingFrom(true);
@@ -284,41 +369,41 @@ const CallHistory = () => {
   };
 
   const generateCalendarDays = () => {
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getUTCMonth();
+    const currentYear = currentDate.getUTCFullYear();
 
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
+    const firstDay = new Date(Date.UTC(currentYear, currentMonth, 1));
+    const lastDay = new Date(Date.UTC(currentYear, currentMonth + 1, 0));
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    startDate.setUTCDate(startDate.getUTCDate() - firstDay.getUTCDay());
 
     const days = [];
     const tempDate = new Date(startDate);
 
     for (let i = 0; i < 42; i++) {
       days.push(new Date(tempDate));
-      tempDate.setDate(tempDate.getDate() + 1);
+      tempDate.setUTCDate(tempDate.getUTCDate() + 1);
     }
 
     return days;
   };
 
   const handlePreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    setCurrentDate(new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() - 1, 1)));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    setCurrentDate(new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth() + 1, 1)));
   };
 
   const handleYearChange = (event) => {
     const newYear = parseInt(event.target.value);
     setSelectedYear(newYear);
-    setCurrentDate(new Date(newYear, currentDate.getMonth(), 1));
+    setCurrentDate(new Date(Date.UTC(newYear, currentDate.getUTCMonth(), 1)));
   };
 
   const generateYearOptions = () => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date("2025-10-06T13:01:00Z").getUTCFullYear();
     const years = [];
     for (let year = currentYear; year >= currentYear - 1; year--) {
       years.push(year);
@@ -328,9 +413,8 @@ const CallHistory = () => {
 
   const isDateInRange = (date) => {
     if (!fromDate || !toDate) return false;
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
-    return date >= from && date <= to;
+    const dateStr = date.toISOString().split("T")[0];
+    return dateStr >= fromDate && dateStr <= toDate;
   };
 
   const isDateSelected = (date) => {
@@ -338,20 +422,37 @@ const CallHistory = () => {
     return dateStr === fromDate || dateStr === toDate;
   };
 
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  // Helper function to format values (replace 0.00 with -)
+  const formatValue = (value) => {
+    return value === "0.00" ? "-" : value;
+  };
+
+  // Calculate counts for tabs
+  const allCount = allCalls.length;
+  const verifiedCount = allCalls.filter((call) => call.status.toLowerCase() === "verified").length;
+  const unverifiedCount = allCalls.filter((call) =>
+    call.status.toLowerCase() === "unverified" || call.status.toLowerCase() === "pending"
+  ).length;
+
   if (loading) {
     return (
       <div className="border border-[#F7F7F7] p-4 animate-pulse">
         <div className="flex justify-between items-center px-4 py-2 bg-white">
           <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse rounded-lg overflow-hidden">
+        <div className="">
+          <table className="w-full border-collapse rounded-lg ">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3">
                   <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
                 </th>
-                {[...Array(8)].map((_, i) => (
+                {[...Array(9)].map((_, i) => (
                   <th key={i} className="px-6 py-3">
                     <div className="h-4 w-1/3 bg-gray-300 rounded"></div>
                   </th>
@@ -364,7 +465,7 @@ const CallHistory = () => {
                   <td className="px-6 py-4 bg-white">
                     <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
                   </td>
-                  {[...Array(8)].map((_, j) => (
+                  {[...Array(9)].map((_, j) => (
                     <td key={j} className="px-6 py-4 bg-white">
                       <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
                     </td>
@@ -387,7 +488,7 @@ const CallHistory = () => {
   }
 
   return (
-    <div className="border border-[#F7F7F7] p-4">
+    <div className="border border-[#F7F7F7] p-6">
       {selectedCalls.length > 0 && (
         <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
           <button
@@ -405,46 +506,80 @@ const CallHistory = () => {
         </div>
       )}
 
-      <div className="flex justify-between items-center px-4 py-2 bg-white">
-        <h2 className="robotomedium text-[20px]">
+      <div className="flex flex-col px-4 py-2 bg-white">
+        <h2 className="robotomedium text-[20px] mb-4">
           Call History {driver ? `- ${driver.name}` : ""}
         </h2>
-
-        <div className="relative" ref={datePickerRef}>
-          <div
-            onClick={() => setShowDatePicker(!showDatePicker)}
-            className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
-          >
-            <svg
-              className="w-5 h-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            <span
-              className={`flex-1 ${
-                !fromDate && !toDate ? "text-gray-400" : "text-gray-700"
+        {/* Tabs */}
+        <div className="flex items-center justify-between py-5">
+          {/* <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setActiveTab("All")}
+              className={`text-[16px] robotomedium pb-2 ${
+                activeTab === "All"
+                  ? "text-gray-700 border-b-2 border-gray-700"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {getDateRangeText()}
-            </span>
-            {(fromDate || toDate) && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  clearDates();
-                }}
-                className="text-gray-400 hover:text-gray-600"
+              All ({allCount})
+            </button>
+            <button
+              onClick={() => setActiveTab("Verified")}
+              className={`text-[16px] robotomedium pb-2 ${
+                activeTab === "Verified"
+                  ? "text-[#18CC6C] border-b-2 border-[#18CC6C]"
+                  : "text-[#18CC6C] hover:text-[#16a34a]"
+              }`}
+            >
+              Verified ({verifiedCount})
+            </button>
+            <button
+              onClick={() => setActiveTab("Unverified")}
+              className={`text-[16px] robotomedium pb-2 ${
+                activeTab === "Unverified"
+                  ? "text-[#FFA500] border-b-2 border-[#FFA500]"
+                  : "text-[#FFA500] hover:text-[#e69500]"
+              }`}
+            >
+              Unverified ({unverifiedCount})
+            </button>
+          </div> */}
+          <div></div>
+          <div className="flex justify-end items-center gap-4">
+            {/* Search Bar */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search by Client Name or Call No"
+                className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <div className="relative" ref={datePickerRef}>
+              <div
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
               >
                 <svg
-                  className="w-4 h-4"
+                  className="w-5 h-5 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -453,129 +588,159 @@ const CallHistory = () => {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-              </button>
-            )}
-          </div>
-
-          {showDatePicker && (
-            <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
+                <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
+                  {getDateRangeText()}
+                </span>
+                {(fromDate || toDate) && (
                   <button
-                    onClick={handlePreviousMonth}
-                    className="text-gray-500 hover:text-gray-700"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearDates();
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      {currentDate.toLocaleString("en-US", { month: "long" })}
-                    </span>
-                    <select
-                      value={selectedYear}
-                      onChange={handleYearChange}
-                      className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
-                    >
-                      {generateYearOptions().map((year) => (
-                        <option key={year} value={year}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleNextMonth}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-                <p className="text-sm font-medium text-gray-700 mb-2">
-                  {selectingFrom ? "Select Start Date" : "Select End Date"}
-                </p>
-                <div className="flex space-x-2 text-xs">
-                  <span
-                    className={`px-2 py-1 rounded ${
-                      fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    From: {fromDate ? formatDate(fromDate) : "Not selected"}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded ${
-                      toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
-                    To: {toDate ? formatDate(toDate) : "Not selected"}
-                  </span>
-                </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                  <div
-                    key={day}
-                    className="text-center text-xs font-medium text-gray-500 py-2"
-                  >
-                    {day}
+              {showDatePicker && (
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={handlePreviousMonth}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {currentDate.toLocaleString("en-US", { month: "long" })}
+                        </span>
+                        <select
+                          value={selectedYear}
+                          onChange={handleYearChange}
+                          className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
+                        >
+                          {generateYearOptions().map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={handleNextMonth}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {selectingFrom ? "Select Start Date" : "Select End Date"}
+                    </p>
+                    <div className="flex space-x-2 text-xs">
+                      <span
+                        className={`px-2 py-1 rounded ${
+                          fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded ${
+                          toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        To: {toDate ? formatDate(toDate) : "Not selected"}
+                      </span>
+                    </div>
                   </div>
-                ))}
-                {generateCalendarDays().map((date, index) => {
-                  const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                  const isToday = date.toDateString() === new Date().toDateString();
-                  const isSelected = isDateSelected(date);
-                  const isInRange = isDateInRange(date);
-                  const dateStr = date.toISOString().split("T")[0];
 
-                  return (
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                    {generateCalendarDays().map((date, index) => {
+                      const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
+                      const isToday = date.toISOString().split("T")[0] === new Date("2025-10-06T13:01:00Z").toISOString().split("T")[0];
+                      const isSelected = isDateSelected(date);
+                      const isInRange = isDateInRange(date);
+                      const dateStr = date.toISOString().split("T")[0];
+
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleDateSelect(dateStr)}
+                          className={`
+                            text-sm py-2 hover:bg-blue-50 rounded transition-colors
+                            ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                            ${isToday ? "font-bold text-blue-600" : ""}
+                            ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                            ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
+                          `}
+                        >
+                          {date.getUTCDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t">
                     <button
-                      key={index}
-                      onClick={() => handleDateSelect(dateStr)}
-                      className={`
-                        text-sm py-2 hover:bg-blue-50 rounded transition-colors
-                        ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
-                        ${isToday ? "font-bold text-blue-600" : ""}
-                        ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
-                        ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
-                      `}
+                      onClick={clearDates}
+                      className="text-sm text-gray-500 hover:text-gray-700"
                     >
-                      {date.getDate()}
+                      Clear
                     </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-between items-center pt-2 border-t">
-                <button
-                  onClick={clearDates}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Clear
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDatePicker(false);
-                    setSelectingFrom(true);
-                  }}
-                  className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                >
-                  Done
-                </button>
-              </div>
+                    <button
+                      onClick={() => {
+                        setShowDatePicker(false);
+                        if (fromDate && !toDate) {
+                          setToDate(fromDate);
+                        }
+                        setSelectingFrom(true);
+                      }}
+                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse rounded-lg overflow-hidden">
+      <div className="">
+        <table className="w-full border-collapse rounded-lg ">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -593,13 +758,14 @@ const CallHistory = () => {
               <th className="px-6 py-3 text-left">PR1</th>
               <th className="px-6 py-3 text-left">Total</th>
               <th className="px-6 py-3 text-left">Date</th>
+              {/* <th className="px-6 py-3 text-left">Status</th> */}
             </tr>
           </thead>
           <tbody>
             {calls.length === 0 ? (
               <tr>
                 <td
-                  colSpan="9"
+                  colSpan="10"
                   className="px-6 py-4 text-center text-gray-500 bg-white"
                 >
                   No Call History Available
@@ -638,27 +804,52 @@ const CallHistory = () => {
                     className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
                   >
-                    {call.rem}
+                    {formatValue(call.rem)}
                   </td>
                   <td
                     className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
                   >
-                    {call.rpm}
+                    {formatValue(call.rpm)}
                   </td>
                   <td
                     className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
                   >
-                    {call.pr1}
+                    {formatValue(call.pr1)}
                   </td>
                   <td
                     className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
                     onClick={() => handleTotalClick(call)}
                   >
-                    ${call.total}
+                    ${formatValue(call.total)}
                   </td>
                   <td className="px-6 py-4 bg-white">{formatDate(call.date)}</td>
+                  {/* <td className="px-6 py-4 bg-white relative status-dropdown">
+                    <span
+                      style={{
+                        color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
+                      }}
+                      className="cursor-pointer flex items-center"
+                      onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
+                    >
+                      {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
+                      <FaChevronDown className="inline-block ml-1 w-3 h-3" />
+                    </span>
+                    {showStatusDropdown === call._id && (
+                      <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-32">
+                        {["verified", "unverified"].map((status) => (
+                          <div
+                            key={status}
+                            className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
+                            onClick={() => handleUpdateStatus(call._id, status)}
+                          >
+                            {capitalizeFirstLetter(status)}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td> */}
                 </tr>
               ))
             )}
@@ -669,7 +860,7 @@ const CallHistory = () => {
       {/* Client Details Modal */}
       {showClientModal && selectedClientRecord && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] ">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Call Details</h2>
               <button
@@ -725,7 +916,8 @@ const CallHistory = () => {
                                   Unit Quantity
                                 </label>
                                 <p className="text-sm text-gray-900">
-                                  {Number(service.unitQuantity || 0).toFixed(2)} {service.unitType || "unit"}
+                                  {formatValue(Number(service.unitQuantity || 0).toFixed(2))}{" "}
+                                  {service.unitType || "unit"}
                                 </p>
                               </div>
                               <div>
@@ -733,7 +925,7 @@ const CallHistory = () => {
                                   Base Rate
                                 </label>
                                 <p className="text-sm text-gray-900">
-                                  ${Number(service.baseRate || 0).toFixed(2)}
+                                  ${formatValue(Number(service.baseRate || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
@@ -741,7 +933,7 @@ const CallHistory = () => {
                                   HST
                                 </label>
                                 <p className="text-sm text-gray-900">
-                                  ${Number(service.hst || 0).toFixed(2)}
+                                  ${formatValue(Number(service.hst || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
@@ -749,19 +941,19 @@ const CallHistory = () => {
                                   Total
                                 </label>
                                 <p className="text-sm text-[#0078bd]">
-                                  ${Number(service.total || 0).toFixed(2)}
+                                  ${formatValue(Number(service.total || 0).toFixed(2))}
                                 </p>
                               </div>
                             </div>
                           </div>
                         ))}
                         {!selectedServiceName && (
-                          <div className="mt-4 flex items-center justify-center gap-[10px]">
-                            <label className="text-[22px] font-medium text-gray-600 block ">
+                          <div className="mt-4 flex justify-center items-center gap-[10px]">
+                            <label className="text-[22px] font-medium text-gray-600 block">
                               Grand Total
                             </label>
                             <p className="text-[22px] font-semibold text-[#0078bd]">
-                              ${Number(selectedClientRecord.total || 0).toFixed(2)}
+                              ${formatValue(Number(selectedClientRecord.total || 0).toFixed(2))}
                             </p>
                           </div>
                         )}

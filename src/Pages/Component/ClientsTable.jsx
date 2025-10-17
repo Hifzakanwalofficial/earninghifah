@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Baseurl } from "../../Config";
 
 const ClientsTable = () => {
   const [clients, setClients] = useState([]);
@@ -14,7 +15,7 @@ const ClientsTable = () => {
       return;
     }
 
-    fetch("https://expensemanager-production-4513.up.railway.app/api/common/getAllClients", {
+    fetch(`${Baseurl}/common/getAllClients`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -30,7 +31,7 @@ const ClientsTable = () => {
               ? client.services.map((s) => s.name)
               : ["No Service"],
           }));
-          setClients(formatted.slice(0, 5)); // Limit to 5 clients for table
+          setClients(formatted.slice(0, 3)); // Limit to 5 clients for table
         } else {
           setError(data.message || "Failed to fetch clients.");
         }

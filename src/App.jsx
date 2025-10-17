@@ -12,6 +12,9 @@ import CallHistory from "./admin/CallHistory";
 import Clientlist from "./admin/Clientlist";
 import History from "./Pages/History";
 import Violationlog from "./Pages/Violationlog";
+import ViolationFrom from "./admin/ViolationFrom";
+import ViolationTable from "./admin/ViolationTable";
+import DriverPerformanceAnalytics from "./admin/DrivercallEarningGraph";
 
 function App() {
   return (
@@ -38,6 +41,11 @@ function App() {
           <Route path="alldrivers" element={<Alldrivers />} />
           <Route path="callhistory/:driverId" element={<CallHistory />} />
           <Route path="clientlist" element={<Clientlist />} />
+          <Route path="violationform" element={<ViolationFrom />} />
+          <Route path="violationtable" element={<ViolationTable />} />
+          <Route path="earning" element={<DriverPerformanceAnalytics />} />
+
+
         </Route>
       </Routes>
     </Router>

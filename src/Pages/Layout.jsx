@@ -155,7 +155,7 @@ const Layout = () => {
       {/* Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px]">
         {/* Main Content */}
-        <main className="p-6 flex-1 bg-[#ffffff]">
+        <main className=" flex-1 bg-[#ffffff]">
           <Outlet />
         </main>
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { Baseurl } from "../Config";
 
 const Clientlist = () => {
   const [clients, setClients] = useState([]);
@@ -9,7 +10,7 @@ const Clientlist = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientName, setClientName] = useState('');
-  const [services, setServices] = useState([{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0 }]);
+  const [services, setServices] = useState([{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0, freeUnits: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClients, setSelectedClients] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -24,7 +25,7 @@ const Clientlist = () => {
       return;
     }
 
-    fetch("https://expensemanager-production-4513.up.railway.app/api/common/getAllClients", {
+    fetch(`${Baseurl}/common/getAllClients`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -40,7 +41,17 @@ const Clientlist = () => {
             services: client.services.length > 0 
               ? client.services.map(s => s.name)
               : ["No Service"],
-            fullServices: client.services,
+            fullServices: client.services.map(s => ({
+              name: s.name,
+              type: s.type,
+              baseRate: s.baseRate,
+              hst: s.hst,
+              total: s.total,
+              freeUnits: s.freeUnits || 0,
+              unitType: s.unitType || null,
+              unitQuantity: s.unitQuantity || null,
+              _id: s._id
+            })),
           }));
           setClients(formatted);
         } else {
@@ -58,7 +69,18 @@ const Clientlist = () => {
   const openModal = (client) => {
     setSelectedClient(client);
     setClientName(client.name);
-    setServices(client.fullServices.length > 0 ? client.fullServices : [{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0 }]);
+    setServices(client.fullServices.length > 0 
+      ? client.fullServices.map(s => ({
+          name: s.name,
+          type: s.type,
+          baseRate: s.baseRate || 0,
+          hst: s.hst || 0,
+          total: s.total || 0,
+          freeUnits: s.freeUnits || 0,
+          unitType: s.unitType || null,
+          unitQuantity: s.unitQuantity || null
+        }))
+      : [{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0, freeUnits: 0, unitType: null, unitQuantity: null }]);
     setIsModalOpen(true);
   };
 
@@ -66,7 +88,7 @@ const Clientlist = () => {
     setIsModalOpen(false);
     setSelectedClient(null);
     setClientName('');
-    setServices([{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0 }]);
+    setServices([{ name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0, freeUnits: 0 }]);
   };
 
   const handleServiceChange = (index, field, value) => {
@@ -83,7 +105,7 @@ const Clientlist = () => {
   };
 
   const addService = () => {
-    setServices([...services, { name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0 }]);
+    setServices([...services, { name: '', type: 'fixed', baseRate: 0, hst: 0, total: 0, freeUnits: 0 }]);
   };
 
   const removeService = (index) => {
@@ -93,6 +115,12 @@ const Clientlist = () => {
   const handleUpdateClient = async () => {
     if (!clientName || services.some(s => !s.name)) {
       toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Validate freeUnits
+    if (services.some(s => parseFloat(s.freeUnits) < 0 || isNaN(parseFloat(s.freeUnits)))) {
+      toast.error('Free Units must be a non-negative number');
       return;
     }
 
@@ -112,11 +140,14 @@ const Clientlist = () => {
         baseRate: parseFloat(s.baseRate) || 0,
         hst: parseFloat(s.hst) || 0,
         total: parseFloat(s.total) || 0,
+        freeUnits: parseFloat(s.freeUnits) || 0,
+        unitType: s.unitType || null,
+        unitQuantity: s.unitQuantity ? parseFloat(s.unitQuantity) : null
       })),
     };
 
     try {
-      const res = await fetch(`https://expensemanager-production-4513.up.railway.app/api/admin/updateClient/${selectedClient._id}`, {
+      const res = await fetch(`${Baseurl}/admin/updateClient/${selectedClient._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -129,7 +160,21 @@ const Clientlist = () => {
         toast.success('Client updated successfully!');
         setClients(clients.map(client => 
           client._id === selectedClient._id 
-            ? { ...client, name: clientName, services: services.map(s => s.name), fullServices: services }
+            ? { 
+                ...client, 
+                name: clientName, 
+                services: services.map(s => s.name), 
+                fullServices: services.map(s => ({
+                  name: s.name,
+                  type: s.type,
+                  baseRate: parseFloat(s.baseRate) || 0,
+                  hst: parseFloat(s.hst) || 0,
+                  total: parseFloat(s.total) || 0,
+                  freeUnits: parseFloat(s.freeUnits) || 0,
+                  unitType: s.unitType || null,
+                  unitQuantity: s.unitQuantity ? parseFloat(s.unitQuantity) : null
+                }))
+              }
             : client
         ));
         closeModal();
@@ -172,7 +217,7 @@ const Clientlist = () => {
 
     try {
       const response = await fetch(
-        `https://expensemanager-production-4513.up.railway.app/api/admin/deleteClients`,
+        `${Baseurl}/admin/deleteClients`,
         {
           method: "DELETE",
           headers: {
@@ -231,21 +276,20 @@ const Clientlist = () => {
     <>
       {/* Action Buttons (Delete/Cancel) */}
       {selectedClients.length > 0 && (
-      <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
-  <button
-    onClick={() => setShowDeleteModal(true)}
-    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-  >
-    Delete
-  </button>
-  <button
-    onClick={handleCancelSelection}
-    className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-  >
-    Cancel
-  </button>
-</div>
-
+        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Delete
+          </button>
+          <button
+            onClick={handleCancelSelection}
+            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+          >
+            Cancel
+          </button>
+        </div>
       )}
 
       <div>
@@ -387,7 +431,8 @@ const Clientlist = () => {
                           disabled={isSubmitting}
                         >
                           <option value="fixed">Fixed</option>
-                          <option value="variable">Variable</option>
+                          <option value="distance">Distance</option>
+                          <option value="time">Time</option>
                         </select>
                       </div>
                       <div>
@@ -422,6 +467,43 @@ const Clientlist = () => {
                           disabled
                         />
                       </div>
+                      <div>
+                        <label className="block text-[#1E293B] text-[12px] mb-1">Free Units</label>
+                        <input
+                          type="number"
+                          value={service.freeUnits}
+                          onChange={(e) => handleServiceChange(index, 'freeUnits', e.target.value)}
+                          placeholder="Enter free units"
+                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      {service.name.startsWith('PR1') && (
+                        <>
+                          <div>
+                            <label className="block text-[#1E293B] text-[12px] mb-1">Unit Type</label>
+                            <input
+                              type="text"
+                              value={service.unitType || ''}
+                              onChange={(e) => handleServiceChange(index, 'unitType', e.target.value || null)}
+                              placeholder="Enter unit type"
+                              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[#1E293B] text-[12px] mb-1">Unit Quantity</label>
+                            <input
+                              type="number"
+                              value={service.unitQuantity || ''}
+                              onChange={(e) => handleServiceChange(index, 'unitQuantity', e.target.value || null)}
+                              placeholder="Enter unit quantity"
+                              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                              disabled={isSubmitting}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                     {services.length > 1 && (
                       <button
