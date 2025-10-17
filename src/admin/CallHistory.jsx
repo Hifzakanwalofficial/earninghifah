@@ -441,12 +441,12 @@ const CallHistory = () => {
 
   if (loading) {
     return (
-      <div className="border border-[#F7F7F7] p-4 animate-pulse">
+      <div className="border border-[#F7F7F7]  animate-pulse">
         <div className="flex justify-between items-center px-4 py-2 bg-white">
           <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
         </div>
-        <div className="">
-          <table className="w-full border-collapse rounded-lg ">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse rounded-lg min-w-[600px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3">
@@ -488,9 +488,9 @@ const CallHistory = () => {
   }
 
   return (
-    <div className="border border-[#F7F7F7] p-6">
+    <div className="border border-[#F7F7F7] p-0 sm:p-6">
       {selectedCalls.length > 0 && (
-        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
+        <div className="flex gap-3 p-3 bg-gray-100  justify-end">
           <button
             onClick={() => setShowDeleteModal(true)}
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -545,15 +545,15 @@ const CallHistory = () => {
             </button>
           </div> */}
           <div></div>
-          <div className="flex justify-end items-center gap-4">
+          <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 w-full sm:w-auto">
             {/* Search Bar */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto sm:min-w-[250px]">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 placeholder="Search by Client Name or Call No"
-                className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+                className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
               />
               {searchQuery && (
                 <button
@@ -573,10 +573,10 @@ const CallHistory = () => {
                 </button>
               )}
             </div>
-            <div className="relative" ref={datePickerRef}>
+            <div className="relative w-full sm:w-auto sm:min-w-[250px]" ref={datePickerRef}>
               <div
                 onClick={() => setShowDatePicker(!showDatePicker)}
-                className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+                className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
               >
                 <svg
                   className="w-5 h-5 text-gray-400"
@@ -615,7 +615,7 @@ const CallHistory = () => {
               </div>
 
               {showDatePicker && (
-                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-full sm:w-80 max-w-[90vw]">
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <button
@@ -664,7 +664,7 @@ const CallHistory = () => {
                     <p className="text-sm font-medium text-gray-700 mb-2">
                       {selectingFrom ? "Select Start Date" : "Select End Date"}
                     </p>
-                    <div className="flex space-x-2 text-xs">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 text-xs">
                       <span
                         className={`px-2 py-1 rounded ${
                           fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
@@ -739,8 +739,8 @@ const CallHistory = () => {
           </div>
         </div>
       </div>
-      <div className="">
-        <table className="w-full border-collapse rounded-lg ">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse rounded-lg min-w-[800px]">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -785,7 +785,7 @@ const CallHistory = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </td>
-                  <td className="px-6 py-4 bg-white">{call.clientName}</td>
+                  <td className="px-6 py-4 bg-white whitespace-nowrap ">{call.clientName}</td>
                   <td className="px-6 py-4 bg-white">{call.call}</td>
                   <td className="px-6 py-4 bg-white">
                     <div className="flex gap-2 flex-wrap">
@@ -860,7 +860,7 @@ const CallHistory = () => {
       {/* Client Details Modal */}
       {showClientModal && selectedClientRecord && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] ">
+          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Call Details</h2>
               <button
@@ -910,7 +910,7 @@ const CallHistory = () => {
                             <p className="text-lg font-medium text-gray-700 mb-2">
                               {service.name}
                             </p>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
                                 <label className="text-sm text-gray-600 block">
                                   Unit Quantity
@@ -948,7 +948,7 @@ const CallHistory = () => {
                           </div>
                         ))}
                         {!selectedServiceName && (
-                          <div className="mt-4 flex justify-center items-center gap-[10px]">
+                          <div className="mt-4 flex flex-col sm:flex-row justify-center items-center gap-[10px]">
                             <label className="text-[22px] font-medium text-gray-600 block">
                               Grand Total
                             </label>
@@ -988,7 +988,7 @@ const CallHistory = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg w-[400px]">
+          <div className="bg-white rounded-lg p-6 shadow-lg w-[400px] max-w-[90vw]">
             <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
             <p className="mb-6">
               Are you sure you want to delete{" "}

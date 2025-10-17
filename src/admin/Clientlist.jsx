@@ -246,8 +246,8 @@ const Clientlist = () => {
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px]">
+      <div className="overflow-x-auto animate-pulse">
+        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
           <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
           <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
           <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
@@ -256,7 +256,7 @@ const Clientlist = () => {
         {[...Array(5)].map((_, index) => (
           <div
             key={index}
-            className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px]"
+            className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
           >
             <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
             <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
@@ -292,9 +292,9 @@ const Clientlist = () => {
         </div>
       )}
 
-      <div>
+      <div className="overflow-x-auto">
         {/* Table Header */}
-        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px]">
+        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
           <div className="flex items-center justify-center">
             <input
               type="checkbox"
@@ -322,7 +322,7 @@ const Clientlist = () => {
           clients.map((client, index) => (
             <div
               key={index}
-              className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px]"
+              className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
             >
               <div className="flex items-center justify-center">
                 <input

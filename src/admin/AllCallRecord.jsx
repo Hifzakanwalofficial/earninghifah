@@ -148,6 +148,7 @@ const CallRecorded = () => {
         }
         const formatted = allCallsData.map((call, index) => ({
           _id: call._id,
+          driverId: call.driverId?._id || null,
           driverName: call.driverId?.name || "N/A",
           call: call.phoneNumber || "N/A",
           clientName: call.clientId?.name || "N/A",
@@ -292,22 +293,39 @@ const CallRecorded = () => {
     }
 
     try {
-      const response = await fetch(
-        `${Baseurl}/admin/deleteCalls`,
-        {
+      const selectedCallObjects = selectedCalls
+        .map((id) => allCalls.find((c) => c._id === id))
+        .filter(Boolean);
+
+      const groups = new Map();
+      selectedCallObjects.forEach((call) => {
+        const driverId = call.driverId;
+        if (driverId) {
+          if (!groups.has(driverId)) {
+            groups.set(driverId, []);
+          }
+          groups.get(driverId).push(call._id);
+        }
+      });
+
+      const deletePromises = Array.from(groups.entries()).map(([driverId, callIds]) =>
+        fetch(`${Baseurl}/admin/deleteCalls/${driverId}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ callIds: selectedCalls }),
-        }
+          body: JSON.stringify({ callIds }),
+        }).then((response) => {
+          if (!response.ok) {
+            const errorData = response.json();
+            throw new Error(errorData.message || "Failed to delete calls");
+          }
+          return response;
+        })
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete calls");
-      }
+      await Promise.all(deletePromises);
 
       setAllCalls((prev) => prev.filter((c) => !selectedCalls.includes(c._id)));
       setSelectedCalls([]);
@@ -508,224 +526,236 @@ const CallRecorded = () => {
 
   return (
     <div className="border border-[#F7F7F7] p-6">
-      {selectedCalls.length > 0 && (
-        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            Delete
-          </button>
-          <button
-            onClick={handleCancelSelection}
-            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+    {selectedCalls.length > 0 && (
+  <div className="flex flex-wrap gap-3 p-3 bg-gray-100  justify-end md:justify-between items-center rounded-md shadow-sm">
+    {/* Selected Info (optional – can show how many selected) */}
+    <p className="text-sm text-gray-700 hidden md:block">
+      {selectedCalls.length} call{selectedCalls.length > 1 ? "s" : ""} selected
+    </p>
 
-      <div className="flex flex-col px-4 py-2 bg-white">
-        <h2 className="robotomedium text-[20px] mb-4">
-          Call Recorded
-        </h2>
-        {/* Tabs */}
-        <div className="flex items-center justify-between py-5">
-          <div></div>
-          <div className="flex justify-end items-center gap-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                placeholder="Search by Driver, Client Name or Call No"
-                className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
+    {/* Action Buttons */}
+    <div className="flex flex-wrap justify-end w-full sm:w-auto gap-3">
+      <button
+        onClick={() => setShowDeleteModal(true)}
+        className="flex-1 sm:flex-none bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm font-medium transition-all duration-200"
+      >
+        Delete
+      </button>
+      <button
+        onClick={handleCancelSelection}
+        className="flex-1 sm:flex-none bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 text-sm font-medium transition-all duration-200"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
+
+
+    <div className="flex flex-col px-4 py-2 bg-white">
+  <h2 className="robotomedium text-[20px] mb-4">
+    Call Recorded
+  </h2>
+  {/* Tabs */}
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between py-5 gap-4 md:gap-0">
+    <div></div>
+    <div className="flex flex-col md:flex-row md:justify-end items-start md:items-center gap-4 w-full md:w-auto">
+      {/* Search Bar */}
+      <div className="relative w-full md:min-w-[250px]">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          placeholder="Search by Driver, Client Name or Call No"
+          className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => {
+              setSearchQuery("");
+            }}
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
               />
-              {searchQuery && (
+            </svg>
+          </button>
+        )}
+      </div>
+      <div className="relative w-full md:min-w-[250px]" ref={datePickerRef}>
+        <div
+          onClick={() => setShowDatePicker(!showDatePicker)}
+          className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <svg
+            className="w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
+            {getDateRangeText()}
+          </span>
+          {(fromDate || toDate) && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                clearDates();
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {showDatePicker && (
+          <div className="absolute top-full mt-2 left-0 md:right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-full md:w-80">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
                 <button
-                  onClick={() => {
-                    setSearchQuery("");
-                  }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={handlePreviousMonth}
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
+                      d="M15 19l-7-7 7-7"
                     />
                   </svg>
                 </button>
-              )}
-            </div>
-            <div className="relative" ref={datePickerRef}>
-              <div
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[250px]"
-              >
-                <svg
-                  className="w-5 h-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
-                  {getDateRangeText()}
-                </span>
-                {(fromDate || toDate) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      clearDates();
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    {currentDate.toLocaleString("en-US", { month: "long" })}
+                  </span>
+                  <select
+                    value={selectedYear}
+                    onChange={handleYearChange}
+                    className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {showDatePicker && (
-                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <button
-                        onClick={handlePreviousMonth}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 19l-7-7 7-7"
-                          />
-                        </svg>
-                      </button>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-gray-700">
-                          {currentDate.toLocaleString("en-US", { month: "long" })}
-                        </span>
-                        <select
-                          value={selectedYear}
-                          onChange={handleYearChange}
-                          className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
-                        >
-                          {generateYearOptions().map((year) => (
-                            <option key={year} value={year}>
-                              {year}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={handleNextMonth}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                    <p className="text-sm font-medium text-gray-700 mb-2">
-                      {selectingFrom ? "Select Start Date" : "Select End Date"}
-                    </p>
-                    <div className="flex space-x-2 text-xs">
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        From: {fromDate ? formatDate(fromDate) : "Not selected"}
-                      </span>
-                      <span
-                        className={`px-2 py-1 rounded ${
-                          toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        To: {toDate ? formatDate(toDate) : "Not selected"}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 mb-2">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                        {day}
-                      </div>
+                    {generateYearOptions().map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
                     ))}
-                    {generateCalendarDays().map((date, index) => {
-                      const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
-                      const isToday = date.toISOString().split("T")[0] === new Date("2025-10-06T13:01:00Z").toISOString().split("T")[0];
-                      const isSelected = isDateSelected(date);
-                      const isInRange = isDateInRange(date);
-                      const dateStr = date.toISOString().split("T")[0];
-
-                      return (
-                        <button
-                          key={index}
-                          onClick={() => handleDateSelect(dateStr)}
-                          className={`
-                            text-sm py-2 hover:bg-blue-50 rounded transition-colors
-                            ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
-                            ${isToday ? "font-bold text-blue-600" : ""}
-                            ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
-                            ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
-                          `}
-                        >
-                          {date.getUTCDate()}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex justify-between items-center pt-2 border-t">
-                    <button
-                      onClick={clearDates}
-                      className="text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowDatePicker(false);
-                        if (fromDate && !toDate) {
-                          setToDate(fromDate);
-                        }
-                        setSelectingFrom(true);
-                      }}
-                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                    >
-                      Done
-                    </button>
-                  </div>
+                  </select>
                 </div>
-              )}
+                <button
+                  onClick={handleNextMonth}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                {selectingFrom ? "Select Start Date" : "Select End Date"}
+              </p>
+              <div className="flex space-x-2 text-xs">
+                <span
+                  className={`px-2 py-1 rounded ${
+                    fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                </span>
+                <span
+                  className={`px-2 py-1 rounded ${
+                    toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  To: {toDate ? formatDate(toDate) : "Not selected"}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                  {day}
+                </div>
+              ))}
+              {generateCalendarDays().map((date, index) => {
+                const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
+                const isToday = date.toISOString().split("T")[0] === new Date("2025-10-06T13:01:00Z").toISOString().split("T")[0];
+                const isSelected = isDateSelected(date);
+                const isInRange = isDateInRange(date);
+                const dateStr = date.toISOString().split("T")[0];
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleDateSelect(dateStr)}
+                    className={`
+                      text-sm py-2 hover:bg-blue-50 rounded transition-colors
+                      ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                      ${isToday ? "font-bold text-blue-600" : ""}
+                      ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                      ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
+                    `}
+                  >
+                    {date.getUTCDate()}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-between items-center pt-2 border-t">
+              <button
+                onClick={clearDates}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => {
+                  setShowDatePicker(false);
+                  if (fromDate && !toDate) {
+                    setToDate(fromDate);
+                  }
+                  setSelectingFrom(true);
+                }}
+                className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+              >
+                Done
+              </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
+    </div>
+  </div>
+</div>
+
+
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse rounded-lg ">
           <thead className="bg-gray-50">
@@ -1001,32 +1031,32 @@ const CallRecorded = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 shadow-lg w-[400px]">
-            <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
-            <p className="mb-6">
-              Are you sure you want to delete{" "}
-              <span className="font-bold">{selectedCalls.length}</span> call(s)?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteLoading}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-              >
-                {deleteLoading ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+  {showDeleteModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 p-4">
+    <div className="bg-white rounded-lg p-4 sm:p-6 shadow-lg w-full max-w-[400px]">
+      <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
+      <p className="mb-6">
+        Are you sure you want to delete{" "}
+        <span className="font-bold">{selectedCalls.length}</span> call(s)?
+      </p>
+      <div className="flex flex-col sm:flex-row justify-end gap-3">
+        <button
+          onClick={() => setShowDeleteModal(false)}
+          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 w-full sm:w-auto"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={deleteLoading}
+          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 w-full sm:w-auto"
+        >
+          {deleteLoading ? "Deleting..." : "Delete"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

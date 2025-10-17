@@ -291,11 +291,11 @@ const Alldrivers = () => {
                   <span className="font-semibold">Driver Name</span>
                 </div>
               </th>
-              <th className="px-4 py-3 w-[19%] font-semibold">Email</th>
-              <th className="px-4 py-3 w-[19%] font-semibold">Password</th>
-              <th className="px-4 py-3 w-[19%] font-semibold">Calls</th>
-              <th className="px-4 py-3 w-[19%] font-semibold">Total Earnings</th>
-              <th className="px-4 py-3 w-[5%] font-semibold">Action</th>
+              <th className="px-4 py-3 w-[19%] font-semibold  whitespace-nowrap">Email</th>
+              <th className="px-4 py-3 w-[19%] font-semibold  whitespace-nowrap">Password</th>
+              <th className="px-4 py-3 w-[19%] font-semibold  whitespace-nowrap">Calls</th>
+              <th className="px-4 py-3 w-[19%] font-semibold whitespace-nowrap ">Total Earnings</th>
+              <th className="px-4 py-3 w-[5%] font-semibold  whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -398,30 +398,31 @@ const Alldrivers = () => {
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex justify-between items-center mt-4 px-4">
-        <div>
-          Showing {drivers.length} of {totalDrivers} drivers
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mt-4 px-4 text-sm">
+  <div className="text-center sm:text-left">
+    Showing {drivers.length} of {totalDrivers} drivers
+  </div>
+  <div className="flex flex-wrap justify-center sm:justify-end items-center gap-2">
+    <button
+      onClick={() => handlePageChange(currentPage - 1)}
+      disabled={currentPage === 1}
+      className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+    >
+      Previous
+    </button>
+    <span className="text-gray-700">
+      Page {currentPage} of {totalPages}
+    </span>
+    <button
+      onClick={() => handlePageChange(currentPage + 1)}
+      disabled={currentPage === totalPages}
+      className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+    >
+      Next
+    </button>
+  </div>
+</div>
+
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

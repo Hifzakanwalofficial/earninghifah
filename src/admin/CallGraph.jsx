@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
+import { Baseurl } from '../Config';
 
 const CallGraph = () => {
   const [clientData, setClientData] = useState([]);
+  const [chartWidth, setChartWidth] = useState('100%');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('https://expensemanager-production-4513.up.railway.app/api/admin/drivers-graph', {
+        const response = await fetch(`${Baseurl}/admin/drivers-graph`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -20,7 +32,7 @@ const CallGraph = () => {
         }
         const res = await response.json();
         const rawData = res.data || [];
-        const sortedData = [...rawData].sort((a, b) => b.totalEarnings - a.totalEarnings).slice(0, 9);
+        const sortedData = [...rawData].sort((a, b) => b.totalCalls - a.totalCalls);
         const formattedData = sortedData.map(driver => ({
           name: "Client call",
           clientName: driver.name,
@@ -36,20 +48,33 @@ const CallGraph = () => {
     fetchData();
   }, []);
 
-  // Custom label for bars
-  const renderLabel = (props) => {
-    const { x, y, width, value, payload } = props;
-    const displayValue = payload?.earnings || value || 8200;
+  useEffect(() => {
+    if (clientData.length > 0) {
+      if (isMobile) {
+        const barSpacing = 60;
+        setChartWidth(clientData.length * barSpacing);
+      } else {
+        setChartWidth('100%');
+      }
+    }
+  }, [clientData, isMobile]);
+
+  // Custom earnings label for line
+  const renderEarningsLabel = (props) => {
+    const { x, y, payload } = props;
+    const earnings = payload?.earnings || 0;
+    if (earnings === 0) return null;
+    const formatted = `$${(earnings / 1000).toFixed(1)}k`;
     return (
       <text 
-        x={x + width / 2} 
-        y={y - 6} 
-        fill="#1F2937" 
+        x={x} 
+        y={y - 10} 
         textAnchor="middle" 
+        fill="#0078BD" 
         fontSize="11"
         fontWeight="500"
       >
-        $ {(displayValue / 1000).toFixed(1)}k
+        {formatted}
       </text>
     );
   };
@@ -59,7 +84,7 @@ const CallGraph = () => {
     const { cx, cy } = props;
     return (
       <g>
-        <circle cx={cx} cy={cy} r={4} fill="#69BA6C" stroke="#FFFFFF" strokeWidth={2.5} />
+        <circle cx={cx} cy={cy} r={4} fill="#FFFFFF" stroke="#0078BD" strokeWidth={2} />
       </g>
     );
   };
@@ -78,30 +103,7 @@ const CallGraph = () => {
     return null;
   };
 
-const CustomLegend = (props) => {
-  const { payload } = props;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', paddingTop: '10px' }}>
-      {payload.map((entry, index) => (
-        <div key={`legend-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              // 👇 change background color here
-              backgroundColor: entry.value === 'earnings' ? '#0078BD' : '#69BA6C',
-              borderRadius: entry.value === 'calls' ? '0%' : '0px',
-            }}
-          />
-          <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
-            {entry.value === 'earnings' ? 'Total Earnings' : 'Total Calls'}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-};
-
+  const barSize = isMobile ? 50 : 50;
 
   return (
     <div className="w-full bg-white p-6 md:p-0">
@@ -114,8 +116,8 @@ const CustomLegend = (props) => {
       </div>
 
       {/* Chart Container */}
-  <div className="w-full h-[500px]">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-[500px] overflow-x-auto">
+        <ResponsiveContainer width={chartWidth} height="100%">
           <ComposedChart
             data={clientData}
             margin={{ top: 35, right: 80, left: -5, bottom: 60 }}
@@ -146,37 +148,96 @@ const CustomLegend = (props) => {
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#6B7280', fontSize: 11 }}
-              domain={[0, 75]}
-              ticks={[0, 10, 25, 50, 75]}
+              domain={[0, 'dataMax']}
               width={40}
-            />
-            
-            <YAxis 
-              yAxisId="right"
-              orientation="right"
-              axisLine={false}
-              tickLine={false}
-              tick={false}
-              domain={[0, 15000]}
-              ticks={[0, 5000, 10000, 15000]}
-              width={60}
             />
             
             <Tooltip content={<CustomTooltip />} cursor={false} />
             
-            <Legend content={CustomLegend} verticalAlign="bottom" height={36} />
-            
-            {/* Bars for earnings */}
-            <Bar 
-              yAxisId="right"
-              dataKey="earnings" 
+            <Legend
+              verticalAlign="bottom"
+              height={40}
+              content={() => (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '30px',
+                    paddingTop: '10px',
+                  }}
+                >
+                  {/* Total Calls */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        backgroundColor: '#69BA6C', // green for calls
+                        borderRadius: '0px',
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
+                      Total Calls
+                    </span>
+                  </div>
+
+                  {/* Total Earnings */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div
+                      style={{
+                        width: 12,
+                        height: 12,
+                        backgroundColor: '#0078BD', // blue for earnings
+                        borderRadius: '0%',
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
+                      Total Earnings
+                    </span>
+                  </div>
+                </div>
+              )}
+            />
+
+            {/* Bars for calls */}
+            <Bar
+              yAxisId="left"
+              dataKey="calls"
               fill="#69BA6C"
               radius={[0, 0, 0, 0]}
-              barSize={50}
-              label={renderLabel}
-            />
-            
-            {/* Line for calls */}
+              barSize={barSize}
+              shape={(props) => {
+                const { x, y, width, height, fill } = props;
+                const minHeight = 4; // Always show at least a small bar
+                const adjustedHeight = height > 0 ? height : minHeight;
+                const adjustedY = height > 0 ? y : y - minHeight; // shift upward for visibility
+                return (
+                  <rect
+                    x={x}
+                    y={adjustedY}
+                    width={width}
+                    height={adjustedHeight}
+                    fill={fill}
+                    rx={4}
+                    ry={4}
+                  />
+                );
+              }}
+            >
+              <LabelList
+                dataKey="earnings"
+                position="top"
+                formatter={(value) => `$${(value / 1000).toFixed(1)}k`}
+                style={{
+                  fill: "#000000B2",
+                  fontSize: 11,
+                  fontWeight: 500,
+                }}
+              />
+            </Bar>
+
+            {/* Line for earnings, positioned at bar tops */}
             <Line 
               yAxisId="left"
               type="natural"
@@ -184,6 +245,7 @@ const CustomLegend = (props) => {
               stroke="#0078BD"
               strokeWidth={1.5}
               dot={renderDot}
+              label={renderEarningsLabel}
               activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 3 }}
               animationDuration={1000}
             />

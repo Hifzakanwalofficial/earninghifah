@@ -180,8 +180,17 @@
 
 // export default DriverPerformanceAnalytics;
 
+
+
+
+
+
+
+
+
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Baseurl } from '../Config';
 
 const DriverPerformanceAnalytics = () => {
   const [driverData, setDriverData] = useState([]);
@@ -190,7 +199,7 @@ const DriverPerformanceAnalytics = () => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('authToken'); // Assuming token is stored in localStorage; adjust as needed
-        const response = await fetch('https://expensemanager-production-4513.up.railway.app/api/admin/drivers-graph', {
+        const response = await fetch(`${Baseurl}/admin/drivers-graph`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -210,8 +219,8 @@ const DriverPerformanceAnalytics = () => {
     fetchData();
   }, []);
 
-  // Sort by totalEarnings descending and take top 7
-  const sortedData = [...driverData].sort((a, b) => b.totalEarnings - a.totalEarnings).slice(0, 7);
+  // Sort by totalEarnings descending (all data)
+  const sortedData = [...driverData].sort((a, b) => b.totalEarnings - a.totalEarnings);
 
   // Format data for the chart
   const chartData = sortedData.map((driver) => ({
@@ -220,6 +229,10 @@ const DriverPerformanceAnalytics = () => {
     totalCalls: driver.totalCalls,
     totalEarnings: driver.totalEarnings
   }));
+
+  // Calculate minimum width for horizontal scrolling to maintain bar width
+  const categoryWidth = 115; // 45 * 2 (bars) + 25 (category gap)
+  const chartMinWidth = Math.max(800, chartData.length * categoryWidth + 100);
 
   // Custom label renderer for calls (yellow bars) - on top
   const renderCallsLabel = (props) => {
@@ -286,64 +299,79 @@ const DriverPerformanceAnalytics = () => {
       </div>
 
       {/* Chart */}
-      <div className="w-full" style={{ height: '450px' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={chartData}
-            margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
-            barGap={0}
-            barCategoryGap="20%"
-          >
-            <CartesianGrid 
-              strokeDasharray="3 3" 
-              stroke="#00001A26" 
-              vertical={true}
-            />
-            <XAxis 
-              dataKey="name" 
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: '#6B7280', fontSize: 13, fontWeight: 500 }}
-              dy={10}
-            />
-            <YAxis 
-              axisLine={false}
-              tickLine={false}
-              tick={{ fill: '#6B7280', fontSize: 13,color:"#000000B2", }}
-              tickFormatter={(value) => `$${value}`}
-              domain={[0, 'auto']}
-              dx={-5}
-            />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
-            <Legend 
-              verticalAlign="bottom" 
-              height={36}
-              iconType="square"
-              iconSize={14}
-              wrapperStyle={{
-                paddingTop: '25px',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}
-            />
-            <Bar 
-              dataKey="totalCalls" 
-              fill="#F5AF1B" 
-              name="Total Calls"
-              radius={[0, 0, 0, 0]}
-              maxBarSize={45}
-              label={renderCallsLabel}
-            />
-            <Bar 
-              dataKey="totalEarnings" 
-              fill="#7DA7D9" 
-              name="Total Earnings"
-              radius={[0, 0, 0, 0]}
-              maxBarSize={45}
-              label={renderEarningsLabel}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+      <div 
+        className="w-full scrollbar-hide" 
+        style={{ 
+          height: '450px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none', 
+          msOverflowStyle: 'none' 
+        }}
+      >
+        <style>{`
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+        <div style={{ minWidth: `${chartMinWidth}px`, height: '100%' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
+              barGap={0}
+              barCategoryGap={25}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="#00001A26" 
+                vertical={true}
+              />
+              <XAxis 
+                dataKey="name" 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#6B7280', fontSize: 13, fontWeight: 500 }}
+                dy={10}
+              />
+              <YAxis 
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#6B7280', fontSize: 13,color:"#000000B2", }}
+                tickFormatter={(value) => `$${value}`}
+                domain={[0, 'auto']}
+                dx={-5}
+              />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36}
+                iconType="square"
+                iconSize={14}
+                wrapperStyle={{
+                  paddingTop: '25px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              />
+              <Bar 
+                dataKey="totalCalls" 
+                fill="#F5AF1B" 
+                name="Total Calls"
+                radius={[0, 0, 0, 0]}
+                barSize={45}
+                label={renderCallsLabel}
+              />
+              <Bar 
+                dataKey="totalEarnings" 
+                fill="#7DA7D9" 
+                name="Total Earnings"
+                radius={[0, 0, 0, 0]}
+                barSize={45}
+                label={renderEarningsLabel}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
