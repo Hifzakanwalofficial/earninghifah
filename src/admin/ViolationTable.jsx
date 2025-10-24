@@ -11,14 +11,11 @@ const ViolationTable = () => {
     const fetchViolations = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
-          `${Baseurl}/admin/tickets?status=unpaid`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await fetch(`${Baseurl}/admin/tickets`, { // 👈 Removed status=unpaid query
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         const data = await response.json();
 
         if (response.ok && data.tickets) {
@@ -42,11 +39,11 @@ const ViolationTable = () => {
   });
 
   return (
-    <div className="mx-auto bg-white mt-10 p-6">
+    <div className="mx-auto bg-white mt-3 p-6">
       <p className="robotosemibold text-[24px] mb-[24px]">Violation Forms</p>
 
       {/* Filter Dropdown */}
-      <select
+      {/* <select
         className="mb-[24px] border border-[#616161c5] p-1 rounded-4"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
@@ -54,7 +51,7 @@ const ViolationTable = () => {
         <option value="All">All</option>
         <option value="Paid">Paid</option>
         <option value="Unpaid">Unpaid</option>
-      </select>
+      </select> */}
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -120,9 +117,9 @@ const ViolationTable = () => {
                 <th className="py-3 px-4 robotosemibold text-[16px] text-[black]">
                   Date
                 </th>
-                <th className="py-3 px-4 robotosemibold text-[16px] text-[black]">
+                {/* <th className="py-3 px-4 robotosemibold text-[16px] text-[black]">
                   Status
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -164,7 +161,7 @@ const ViolationTable = () => {
                     <td className="py-3 px-4 robotosemibold text-[#333333]">
                       {new Date(item.createdAt).toLocaleDateString("en-US")}
                     </td>
-                    <td
+                    {/* <td
                       className={`py-3 px-4 robotosemibold font-semibold ${
                         item.status === "paid"
                           ? "text-green-500"
@@ -173,7 +170,7 @@ const ViolationTable = () => {
                     >
                       {item.status.charAt(0).toUpperCase() +
                         item.status.slice(1)}
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               )}

@@ -31,14 +31,17 @@ const Layout = () => {
 
   return (
     <div className="flex min-h-screen">
-      {/* Top Bar for small screens with toggle button */}
-      <header className="bg-[#ffffff] p-4 flex justify-between items-center md:ml-[280px] sticky top-0 z-50 md:hidden">
-        <button
-          className="text-2xl cursor-pointer"
-          onClick={() => setIsOpen(true)}
-        >
-          <FaBars />
-        </button>
+      {/* Top Bar for mobile screens */}
+      <header className="bg-white border-b border-gray-200 p-4 fixed top-0 left-0 right-0 z-40 md:hidden">
+        <div className="flex justify-between items-center">
+          <button
+            className="text-2xl cursor-pointer text-gray-700"
+            onClick={() => setIsOpen(true)}
+          >
+            <FaBars />
+          </button>
+          <div className="w-8"></div> {/* Spacer for center alignment */}
+        </div>
       </header>
 
       {/* Sidebar */}
@@ -47,7 +50,7 @@ const Layout = () => {
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <h2 className="text-[24px] ms-5 italic font-semibold text-[#0078BD] mb-6">
+        <h2 className="text-[18px] md:text-[24px] ms-5 italic font-semibold text-[#0078BD] mb-6">
           Earning Dashboard
         </h2>
 
@@ -147,7 +150,7 @@ const Layout = () => {
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          className="fixed inset-0 bg-[#00000071] bg-opacity-50 z-40 md:hidden"
           onClick={() => setIsOpen(false)}
         ></div>
       )}
@@ -155,7 +158,7 @@ const Layout = () => {
       {/* Content Area */}
       <div className="flex-1 flex flex-col md:ml-[280px]">
         {/* Main Content */}
-        <main className=" flex-1 bg-[#ffffff]">
+        <main className="flex-1 bg-[#ffffff] pt-16 md:pt-0">
           <Outlet />
         </main>
       </div>

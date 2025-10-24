@@ -22,14 +22,11 @@ const ViolationForm = () => {
   useEffect(() => {
     const fetchDrivers = async () => {
       try {
-        const response = await fetch(
-          `${Baseurl}/admin/drivers`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await fetch(`${Baseurl}/admin/drivers`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) throw new Error("Failed to fetch drivers");
         const data = await response.json();
         setDrivers(data.drivers || []);
@@ -56,25 +53,22 @@ const ViolationForm = () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${Baseurl}/admin/createTicket`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            driverId: form.driverId,
-            violationNumber: form.violationNumber,
-            plateNumber: form.plateNumber,
-            amount: Number(form.amount),
-            address: form.address,
-            status: form.status.toLowerCase(),
-            administrationFee: withFee ? 30 : 0,
-          }),
-        }
-      );
+      const response = await fetch(`${Baseurl}/admin/createTicket`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          driverId: form.driverId,
+          violationNumber: form.violationNumber,
+          plateNumber: form.plateNumber,
+          amount: Number(form.amount),
+          address: form.address,
+          status: form.status.toLowerCase(),
+          administrationFee: withFee ? 30 : 0,
+        }),
+      });
 
       const data = await response.json();
 
@@ -199,7 +193,6 @@ const ViolationForm = () => {
             <option value="">Select Status</option>
             <option value="unpaid">Unpaid</option>
             <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
           </select>
         </div>
       </div>

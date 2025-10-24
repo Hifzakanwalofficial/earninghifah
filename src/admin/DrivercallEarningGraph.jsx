@@ -184,102 +184,92 @@
 
 
 
+import React, { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LabelList,
+} from "recharts";
+import { Baseurl } from "../Config";
 
-
-
-
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Baseurl } from '../Config';
+const Shimmer = () => {
+  return (
+    <div className="w-full h-[450px] bg-gray-100 animate-pulse">
+      <div className="h-full flex flex-col justify-center">
+        {[1, 2, 3, 4, 5].map((_, index) => (
+          <div
+            key={index}
+            className="h-8 bg-gray-200 rounded mx-4 mb-4"
+            style={{ width: `${Math.random() * 50 + 50}%` }}
+          ></div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const DriverPerformanceAnalytics = () => {
   const [driverData, setDriverData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('authToken'); // Assuming token is stored in localStorage; adjust as needed
+        const token = localStorage.getItem("authToken");
         const response = await fetch(`${Baseurl}/admin/drivers-graph`, {
-          method: 'GET',
+          method: "GET",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         });
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
+        if (!response.ok) throw new Error("Failed to fetch data");
         const res = await response.json();
         setDriverData(res.data || []);
       } catch (error) {
-        console.error('Error fetching driver data:', error);
-        setDriverData([]); // Fallback to empty array on error
+        console.error("Error fetching driver data:", error);
+        setDriverData([]);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
   }, []);
 
-  // Sort by totalEarnings descending (all data)
-  const sortedData = [...driverData].sort((a, b) => b.totalEarnings - a.totalEarnings);
+  const maxEarnings = Math.max(...driverData.map((d) => d.totalEarnings || 0), 1);
+  const maxCalls = Math.max(...driverData.map((d) => d.totalCalls || 0), 1);
 
-  // Format data for the chart
-  const chartData = sortedData.map((driver) => ({
-    name: driver.name,
-    driverName: driver.name,
-    totalCalls: driver.totalCalls,
-    totalEarnings: driver.totalEarnings
+  const scaledData = driverData.map((driver) => ({
+    name: driver.name || "Unknown",
+    driverName: driver.name || "Unknown",
+    totalCalls: driver.totalCalls || 0,
+    totalEarnings: driver.totalEarnings || 0,
+    scaledCalls: (driver.totalCalls / maxCalls) * maxEarnings * 0.4,
   }));
 
-  // Calculate minimum width for horizontal scrolling to maintain bar width
-  const categoryWidth = 115; // 45 * 2 (bars) + 25 (category gap)
-  const chartMinWidth = Math.max(800, chartData.length * categoryWidth + 100);
+  const sortedData = [...scaledData].sort((a, b) => b.totalEarnings - a.totalEarnings);
 
-  // Custom label renderer for calls (yellow bars) - on top
-  const renderCallsLabel = (props) => {
-    const { x, y, width, value } = props;
-    return (
-      <text 
-        x={x + width / 2} 
-        y={y - 8} 
-        fill="#4B5563" 
-        textAnchor="middle" 
-        fontSize="13"
-        fontWeight="600"
-      >
-        {value}
-      </text>
-    );
-  };
-
-  // Custom label renderer for earnings (blue bars) - inside bar at middle
-  const renderEarningsLabel = (props) => {
-    const { x, y, width, height, value } = props;
-    return (
-      <text 
-        x={x + width / 2} 
-        y={y + height / 2} 
-        fill="#FFFFFF" 
-        textAnchor="middle" 
-        dominantBaseline="middle"
-        fontSize="13"
-        fontWeight="600"
-      >
-        {/* {value} */}
-      </text>
-    );
-  };
+  const categoryWidth = 120;
+  const chartMinWidth = Math.max(800, sortedData.length * categoryWidth + 100);
 
   // Custom tooltip
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const data = payload[0]?.payload || {};
       return (
-        <div className="bg-white p-3  rounded-lg shadow-lg border border-gray-200">
-          <p className="font-semibold text-gray-800 mb-2">{payload[0].payload.driverName}</p>
+        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+          <p className="font-semibold text-gray-800 mb-2">{data.driverName}</p>
           <p className="text-sm text-amber-600 mb-1">
-            <span className="font-medium">Total Calls:</span> {payload[0].value}
+            <span className="font-medium">Total Calls:</span> {data.totalCalls}
           </p>
-          <p className="text-sm text-sky-600">
-            <span className="font-medium">Total Earnings:</span> ${payload[1].value}
+          <p className="text-sm text-[#0078BD]">
+            <span className="font-medium">Total Earnings:</span> ${data.totalEarnings.toFixed(2)}
           </p>
         </div>
       );
@@ -288,7 +278,7 @@ const DriverPerformanceAnalytics = () => {
   };
 
   return (
-    <div className="w-full bg-white p-4 ">
+    <div className="w-full bg-white p-4">
       {/* Header */}
       <div className="mb-6">
         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
@@ -299,79 +289,93 @@ const DriverPerformanceAnalytics = () => {
       </div>
 
       {/* Chart */}
-      <div 
-        className="w-full scrollbar-hide" 
-        style={{ 
-          height: '450px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none', 
-          msOverflowStyle: 'none' 
+      <div
+        className="w-full scrollbar-hide"
+        style={{
+          height: "450px",
+          overflowX: "auto",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
       >
         <style>{`
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
+          .scrollbar-hide::-webkit-scrollbar { display: none; }
         `}</style>
-        <div style={{ minWidth: `${chartMinWidth}px`, height: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
-              barGap={0}
-              barCategoryGap={25}
-            >
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#00001A26" 
-                vertical={true}
-              />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#6B7280', fontSize: 13, fontWeight: 500 }}
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#6B7280', fontSize: 13,color:"#000000B2", }}
-                tickFormatter={(value) => `$${value}`}
-                domain={[0, 'auto']}
-                dx={-5}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
-              <Legend 
-                verticalAlign="bottom" 
-                height={36}
-                iconType="square"
-                iconSize={14}
-                wrapperStyle={{
-                  paddingTop: '25px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              />
-              <Bar 
-                dataKey="totalCalls" 
-                fill="#F5AF1B" 
-                name="Total Calls"
-                radius={[0, 0, 0, 0]}
-                barSize={45}
-                label={renderCallsLabel}
-              />
-              <Bar 
-                dataKey="totalEarnings" 
-                fill="#7DA7D9" 
-                name="Total Earnings"
-                radius={[0, 0, 0, 0]}
-                barSize={45}
-                label={renderEarningsLabel}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+
+        {isLoading ? (
+          <Shimmer />
+        ) : (
+          <div style={{ minWidth: `${chartMinWidth}px`, height: "100%" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={sortedData}
+                margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
+                barGap={4}
+                barCategoryGap={30}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#00000020" vertical={true} />
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#6B7280", fontSize: 13, fontWeight: 500 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: "#6B7280", fontSize: 13 }}
+                  tickFormatter={(value) => `$${value}`}
+                  domain={[0, "auto"]}
+                  dx={-5}
+                />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0, 0, 0, 0.05)" }} />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  iconType="square"
+                  iconSize={14}
+                  wrapperStyle={{
+                    paddingTop: "25px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                  }}
+                />
+
+                {/* 🟡 Total Calls Bar */}
+                <Bar
+                  dataKey="scaledCalls"
+                  fill="#F5AF1B"
+                  name="Total Calls"
+                  barSize={30}
+                  radius={[4, 4, 0, 0]}
+                >
+                  {/* 👇 Labels Above Each Bar */}
+                  <LabelList
+                    dataKey="totalCalls"
+                    position="top"
+                    formatter={(value) => `${value}`}
+                    fill="#374151"
+                    fontSize={13}
+                    fontWeight={600}
+                    offset={10} // pushes label upward a bit
+                    stroke="white" // helps text stay readable over light backgrounds
+                    strokeWidth={0.5}
+                  />
+                </Bar>
+
+                {/* 🟦 Total Earnings Bar */}
+                <Bar
+                  dataKey="totalEarnings"
+                  fill="#0078BD"
+                  name="Total Earnings"
+                  barSize={30}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

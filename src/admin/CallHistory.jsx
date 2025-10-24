@@ -441,41 +441,69 @@ const CallHistory = () => {
 
   if (loading) {
     return (
-      <div className="border border-[#F7F7F7]  animate-pulse">
-        <div className="flex justify-between items-center px-4 py-2 bg-white">
-          <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+      <>
+        {/* Mobile Loading */}
+        <div className="md:hidden border border-[#F7F7F7] animate-pulse">
+          <div className="flex justify-between items-center px-4 py-2 bg-white">
+            <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+          </div>
+          {[...Array(5)].map((_, idx) => (
+            <div key={idx} className="bg-white border-b border-[#E6E6E6] mx-4 mb-2 p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-4 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-16 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-4 w-24 bg-gray-200 rounded mt-2"></div>
+            </div>
+          ))}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse rounded-lg min-w-[600px]">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3">
-                  <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
-                </th>
-                {[...Array(9)].map((_, i) => (
-                  <th key={i} className="px-6 py-3">
-                    <div className="h-4 w-1/3 bg-gray-300 rounded"></div>
+        {/* Desktop Loading */}
+        <div className="hidden md:block border border-[#F7F7F7]  animate-pulse">
+          <div className="flex justify-between items-center px-4 py-2 bg-white">
+            <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse rounded-lg min-w-[600px]">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3">
+                    <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[...Array(5)].map((_, idx) => (
-                <tr key={idx} className="border-b border-[#E6E6E6]">
-                  <td className="px-6 py-4 bg-white">
-                    <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
-                  </td>
-                  {[...Array(9)].map((_, j) => (
-                    <td key={j} className="px-6 py-4 bg-white">
-                      <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                    </td>
+                  {[...Array(9)].map((_, i) => (
+                    <th key={i} className="px-6 py-3">
+                      <div className="h-4 w-1/3 bg-gray-300 rounded"></div>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, idx) => (
+                  <tr key={idx} className="border-b border-[#E6E6E6]">
+                    <td className="px-6 py-4 bg-white">
+                      <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
+                    </td>
+                    {[...Array(9)].map((_, j) => (
+                      <td key={j} className="px-6 py-4 bg-white">
+                        <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -506,12 +534,10 @@ const CallHistory = () => {
         </div>
       )}
 
-      <div className="flex flex-col px-4 py-2 bg-white">
-        <h2 className="robotomedium text-[20px] mb-4">
-          Call History {driver ? `- ${driver.name}` : ""}
-        </h2>
+      <div className="">
+        
         {/* Tabs */}
-        <div className="flex items-center justify-between py-5">
+        <div className="">
           {/* <div className="flex gap-4 mb-4">
             <button
               onClick={() => setActiveTab("All")}
@@ -545,8 +571,18 @@ const CallHistory = () => {
             </button>
           </div> */}
           <div></div>
-          <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 w-full sm:w-auto">
-            {/* Search Bar */}
+<div className="flex flex-col sm:flex-row justify-between items-center my-5 gap-4">
+  <div className="w-full sm:w-auto text-center sm:text-left">
+
+                <h2 className="robotomedium text-[20px] mb-4">
+          Call History {driver ? `- ${driver.name}` : ""}
+        </h2>
+
+            </div>
+          
+
+  <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 justify-end">
+
             <div className="relative w-full sm:w-auto sm:min-w-[250px]">
               <input
                 type="text"
@@ -573,6 +609,7 @@ const CallHistory = () => {
                 </button>
               )}
             </div>
+
             <div className="relative w-full sm:w-auto sm:min-w-[250px]" ref={datePickerRef}>
               <div
                 onClick={() => setShowDatePicker(!showDatePicker)}
@@ -736,125 +773,230 @@ const CallHistory = () => {
                 </div>
               )}
             </div>
+
+
+
+  </div>
+
           </div>
+
+
+
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse rounded-lg min-w-[800px]">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th className="px-6 py-3 text-left">Client</th>
-              <th className="px-6 py-3 text-left">Call No</th>
-              <th className="px-6 py-3 text-left">Services</th>
-              <th className="px-6 py-3 text-left">REMS</th>
-              <th className="px-6 py-3 text-left">RPM</th>
-              <th className="px-6 py-3 text-left">PR1</th>
-              <th className="px-6 py-3 text-left">Total</th>
-              <th className="px-6 py-3 text-left">Date</th>
-              {/* <th className="px-6 py-3 text-left">Status</th> */}
-            </tr>
-          </thead>
-          <tbody>
-            {calls.length === 0 ? (
-              <tr>
-                <td
-                  colSpan="10"
-                  className="px-6 py-4 text-center text-gray-500 bg-white"
-                >
-                  No Call History Available
-                </td>
-              </tr>
-            ) : (
-              calls.map((call, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-[#E6E6E6] hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4 bg-white">
-                    <input
-                      type="checkbox"
-                      checked={selectedCalls.includes(call._id)}
-                      onChange={() => handleSelectCall(call._id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 bg-white whitespace-nowrap ">{call.clientName}</td>
-                  <td className="px-6 py-4 bg-white">{call.call}</td>
-                  <td className="px-6 py-4 bg-white">
-                    <div className="flex gap-2 flex-wrap">
-                      {call.services.map((service, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
-                          onClick={() => handleServiceClick(call, service.name)}
-                        >
-                          {service.name}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+
+
+      {/* Mobile Layout */}
+      <div className="md:hidden space-y-4 px-0 pb-4">
+        {calls.length === 0 ? (
+          <div className="flex justify-center items-center py-8">
+            <p className="text-gray-500 text-[16px]">No Call History Available</p>
+          </div>
+        ) : (
+          calls.map((call, idx) => (
+            <div
+              key={idx}
+              className="bg-white border border-[#EAEFF4] shadow-sm rounded-lg p-4"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedCalls.includes(call._id)}
+                    onChange={() => handleSelectCall(call._id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <p className="text-[15px] text-[#333333] robotomedium flex-1">
+                    {call.clientName}
+                  </p>
+                </div>
+               
+              </div>
+              <p className="text-[13px] text-[#67778E] robotomedium  mb-3">
+                Call No: {call.call}
+              </p>
+              <div className="mb-3">
+                <p className="text-[15px] text-[#67778E] robotomedium mb-2">Services</p>
+                <div className="flex flex-wrap gap-2">
+                  {call.services.map((service, sIdx) => (
+                    <span
+                      key={sIdx}
+                      className=" robotomedium  text-[#67778E]  text-[15px] bg-[#67778E0A]  rounded-full px-3 py-1 text-sm cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, service.name)}
+                    >
+                      {service.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex flex-col items-center">
+                  <p className=" robotomedium  text-[#67778E]  text-[13px]">REMS</p>
+                  <p
+                    className="text-[14px] font-medium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
                   >
                     {formatValue(call.rem)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <p className="robotomedium  text-[#67778E]  text-[13px]">RPM</p>
+                  <p
+                    className="text-[14px] font-medium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
                   >
                     {formatValue(call.rpm)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <p className="robotomedium  text-[#67778E]  text-[13px]">PR1</p>
+                  <p
+                    className="text-[14px] font-medium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
                   >
                     {formatValue(call.pr1)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-center">
+                  <p className="robotomedium  text-[#67778E]  text-[13px]">Total</p>
+                  <p
+                    className="text-[14px] font-semibold text-[#0078BD] cursor-pointer hover:text-blue-700"
                     onClick={() => handleTotalClick(call)}
                   >
                     ${formatValue(call.total)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-start">
+                <p className="robotomedium  text-[#67778E]  text-[13px]">
+                  Date: {formatDate(call.date)}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+
+      {/* Desktop Layout */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse rounded-lg min-w-[800px]">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th className="px-6 py-3 text-left">Client</th>
+                <th className="px-6 py-3 text-left">Call No</th>
+                <th className="px-6 py-3 text-left">Services</th>
+                <th className="px-6 py-3 text-left">REMS</th>
+                <th className="px-6 py-3 text-left">RPM</th>
+                <th className="px-6 py-3 text-left">PR1</th>
+                <th className="px-6 py-3 text-left">Total</th>
+                <th className="px-6 py-3 text-left">Date</th>
+                {/* <th className="px-6 py-3 text-left">Status</th> */}
+              </tr>
+            </thead>
+            <tbody>
+              {calls.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="10"
+                    className="px-6 py-4 text-center text-gray-500 bg-white"
+                  >
+                    No Call History Available
                   </td>
-                  <td className="px-6 py-4 bg-white">{formatDate(call.date)}</td>
-                  {/* <td className="px-6 py-4 bg-white relative status-dropdown">
-                    <span
-                      style={{
-                        color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
-                      }}
-                      className="cursor-pointer flex items-center"
-                      onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
-                    >
-                      {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
-                      <FaChevronDown className="inline-block ml-1 w-3 h-3" />
-                    </span>
-                    {showStatusDropdown === call._id && (
-                      <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-32">
-                        {["verified", "unverified"].map((status) => (
-                          <div
-                            key={status}
-                            className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
-                            onClick={() => handleUpdateStatus(call._id, status)}
+                </tr>
+              ) : (
+                calls.map((call, idx) => (
+                  <tr
+                    key={idx}
+                    className="border-b border-[#E6E6E6] hover:bg-gray-50"
+                  >
+                    <td className="px-6 py-4 bg-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedCalls.includes(call._id)}
+                        onChange={() => handleSelectCall(call._id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td className="px-6 py-4 bg-white whitespace-nowrap ">{call.clientName}</td>
+                    <td className="px-6 py-4 bg-white">{call.call}</td>
+                    <td className="px-6 py-4 bg-white">
+                      <div className="flex gap-2 flex-wrap">
+                        {call.services.map((service, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
+                            onClick={() => handleServiceClick(call, service.name)}
                           >
-                            {capitalizeFirstLetter(status)}
-                          </div>
+                            {service.name}
+                          </span>
                         ))}
                       </div>
-                    )}
-                  </td> */}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+                    >
+                      {formatValue(call.rem)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+                    >
+                      {formatValue(call.rpm)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+                    >
+                      {formatValue(call.pr1)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleTotalClick(call)}
+                    >
+                      ${formatValue(call.total)}
+                    </td>
+                    <td className="px-6 py-4 bg-white">{formatDate(call.date)}</td>
+                    {/* <td className="px-6 py-4 bg-white relative status-dropdown">
+                      <span
+                        style={{
+                          color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
+                        }}
+                        className="cursor-pointer flex items-center"
+                        onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
+                      >
+                        {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
+                        <FaChevronDown className="inline-block ml-1 w-3 h-3" />
+                      </span>
+                      {showStatusDropdown === call._id && (
+                        <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-32">
+                          {["verified", "unverified"].map((status) => (
+                            <div
+                              key={status}
+                              className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
+                              onClick={() => handleUpdateStatus(call._id, status)}
+                            >
+                              {capitalizeFirstLetter(status)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td> */}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Client Details Modal */}
@@ -862,7 +1004,7 @@ const CallHistory = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
           <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Call Details</h2>
+              <h2 className="text-xl robotosemibold text-gray-800">Call Details</h2>
               <button
                 onClick={() => {
                   setShowClientModal(false);
@@ -888,7 +1030,7 @@ const CallHistory = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-600 block mb-2">
+                <label className="text-sm robotomedium text-gray-600 block mb-2">
                   Service Details
                 </label>
                 {(() => {
@@ -907,40 +1049,40 @@ const CallHistory = () => {
                             key={index}
                             className="bg-gray-50 p-4 rounded-lg mb-3"
                           >
-                            <p className="text-lg font-medium text-gray-700 mb-2">
+                            <p className=" text-[14px] sm:text-lg robotomedium text-gray-700 mb-2">
                               {service.name}
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="text-sm text-gray-600 block">
+                                <label className="text-sm text-gray-600 robotomedium block">
                                   Unit Quantity
                                 </label>
-                                <p className="text-sm text-gray-900">
+                                <p className="text-sm robotomedium text-gray-900">
                                   {formatValue(Number(service.unitQuantity || 0).toFixed(2))}{" "}
                                   {service.unitType || "unit"}
                                 </p>
                               </div>
                               <div>
-                                <label className="text-sm text-gray-600 block">
+                                <label className=" robotomedium text-sm text-gray-600 block">
                                   Base Rate
                                 </label>
-                                <p className="text-sm text-gray-900">
+                                <p className=" robotomedium text-sm text-gray-900">
                                   ${formatValue(Number(service.baseRate || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
-                                <label className="text-sm text-gray-600 block">
+                                <label className=" robotomedium text-sm text-gray-600 block">
                                   HST
                                 </label>
-                                <p className="text-sm text-gray-900">
+                                <p className="text-sm robotomedium  text-gray-900">
                                   ${formatValue(Number(service.hst || 0).toFixed(2))}
                                 </p>
                               </div>
                               <div>
-                                <label className="text-sm text-gray-600 block">
+                                <label className=" robotomedium text-sm text-gray-600 block">
                                   Total
                                 </label>
-                                <p className="text-sm text-[#0078bd]">
+                                <p className=" robotomedium text-sm text-[#0078bd]">
                                   ${formatValue(Number(service.total || 0).toFixed(2))}
                                 </p>
                               </div>
@@ -949,7 +1091,7 @@ const CallHistory = () => {
                         ))}
                         {!selectedServiceName && (
                           <div className="mt-4 flex flex-col sm:flex-row justify-center items-center gap-[10px]">
-                            <label className="text-[22px] font-medium text-gray-600 block">
+                            <label className=" robotomedium text-[22px] font-medium text-gray-600 block">
                               Grand Total
                             </label>
                             <p className="text-[22px] font-semibold text-[#0078bd]">
@@ -976,7 +1118,7 @@ const CallHistory = () => {
                   setShowClientModal(false);
                   setSelectedServiceName(null);
                 }}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-6 py-2 bg-[#0078BD] text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 Close
               </button>

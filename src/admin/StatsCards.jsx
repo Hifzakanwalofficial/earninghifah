@@ -64,7 +64,7 @@ const StatsCards = () => {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
       {loading
         ? // shimmer skeleton loader
           Array(4)
@@ -85,11 +85,11 @@ const StatsCards = () => {
               className="bg-white py-[24px] px-[11px] rounded-lg shadow-sm border border-gray-200 flex items-center justify-between"
             >
               <div>
-                <h3 className="text-[16px] robotomedium text-[#333333B2]">
+                <h3 className=" text-[12px] sm:text-[16px] robotomedium text-[#333333B2]">
                   {stat.title}
                 </h3>
                 {/* 👇 yahan 0 bhi dikhayega, remove nahi karega */}
-                <p className="text-[20px] font-semibold text-gray-900">
+                <p className=" text-[16px] sm:text-[20px] font-semibold text-gray-900">
                   {stat.value}
                 </p>
               </div>

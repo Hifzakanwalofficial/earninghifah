@@ -246,25 +246,54 @@ const Clientlist = () => {
 
   if (loading) {
     return (
-      <div className="overflow-x-auto animate-pulse">
-        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
-          <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
-          <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
-          <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
-          <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
-        </div>
-        {[...Array(5)].map((_, index) => (
-          <div
-            key={index}
-            className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
-          >
-            <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
-            <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-            <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-            <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+      <>
+        <div className="md:hidden animate-pulse">
+          {/* Mobile Header */}
+          <div className="flex justify-between items-center bg-[#FAFAFC] px-4 py-3">
+            <div className="h-5 w-16 bg-gray-300 rounded"></div>
+            <div className="h-4 w-4 bg-gray-300 rounded"></div>
           </div>
-        ))}
-      </div>
+          {/* Mobile Skeletons */}
+          {[...Array(5)].map((_, index) => (
+            <div key={index} className="bg-white border border-[#E5E7EB] rounded-lg mx-4 mt-2 p-4">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-4 w-4 bg-gray-200 rounded"></div>
+              </div>
+              <div>
+                <div className="h-3 w-16 bg-gray-200 rounded mb-2"></div>
+                <div className="flex flex-wrap gap-2">
+                  {[...Array(4)].map((_, sIndex) => (
+                    <div key={sIndex} className="h-5 w-20 bg-gray-200 rounded-full"></div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:block overflow-x-auto animate-pulse">
+          <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
+            <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
+            <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
+            <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
+            <div className="h-4 w-1/2 bg-gray-300 rounded"></div>
+          </div>
+          {[...Array(5)].map((_, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
+            >
+              <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+              <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
+              <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+            </div>
+          ))}
+        </div>
+      </>
     );
   }
 
@@ -276,25 +305,27 @@ const Clientlist = () => {
     <>
       {/* Action Buttons (Delete/Cancel) */}
       {selectedClients.length > 0 && (
-        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
+        <div className="flex gap-3 p-3 bg-gray-100 border-b border-[#EAEFF4] justify-end">
           <button
             onClick={() => setShowDeleteModal(true)}
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            className="bg-red-500 text-white px-3 py-2 text-[14px] sm:px-4 sm:py-2 rounded hover:bg-red-600"
           >
             Delete
           </button>
           <button
             onClick={handleCancelSelection}
-            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+            className="bg-gray-400 text-white  px-3 py-2 text-[14px] sm:px-4 sm:py-2 rounded hover:bg-gray-500"
           >
             Cancel
           </button>
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        {/* Table Header */}
-        <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
+      {/* Mobile Layout */}
+      <div className="md:hidden">
+        {/* Mobile Header */}
+        <div className="flex justify-between items-center bg-[#FAFAFC] px-2 py-3">
+          <p className="robotosemibold text-[18px] text-[#333333]">Clients</p>
           <div className="flex items-center justify-center">
             <input
               type="checkbox"
@@ -302,58 +333,127 @@ const Clientlist = () => {
               onChange={handleSelectAll}
             />
           </div>
-          <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
-            Clients Name
-          </p>
-          <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
-            Services
-          </p>
-          <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
-            Actions
-          </p>
         </div>
 
-        {/* Table Rows */}
+        {/* Mobile List */}
         {clients.length === 0 ? (
-          <div className="flex justify-center items-center h-[calc(100vh-150px)]">
+          <div className="flex justify-center  items-center py-8">
             <p className="text-gray-500 text-[16px]">No Client List Available</p>
           </div>
         ) : (
-          clients.map((client, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
-            >
-              <div className="flex items-center justify-center">
-                <input
-                  type="checkbox"
-                  checked={selectedClients.includes(client._id)}
-                  onChange={() => handleSelectClient(client._id)}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <p className="text-[15px] text-[#333333] whitespace-nowrap">
-                {client.name}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {client.services.map((service, serviceIndex) => (
-                  <span
-                    key={serviceIndex}
-                    className="text-[15px] text-[#555555] bg-white border border-[#DADDE2] rounded-full px-3 py-1"
-                  >
-                    {service}
-                  </span>
-                ))}
-              </div>
-              <button
-                onClick={() => openModal(client)}
-                className="text-[14px] text-[#0078BD] robotosemibold hover:text-[#005BB5] cursor-pointer"
+          <div className="space-y-4">
+            {clients.map((client, index) => (
+              <div
+                key={index}
+                className="bg-[#FFFFFF] border border-[#EAEFF4] shadow-sm rounded-[8px] mx-0 p-4"
+                style={{BoxShadow: "0px 0px 10px 0px #E3EBFC"}}
               >
-                Edit
-              </button>
-            </div>
-          ))
+                <div className="flex justify-between border-b pb-1.5 border-[#EAEFF4] items-center mb-3">
+                  <div className="flex items-center  gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedClients.includes(client._id)}
+                      onChange={() => handleSelectClient(client._id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <p className="text-[14px] text-[#333333] robotomedium">
+                      {client.name}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openModal(client)}
+                    className="text-[#0078BD] hover:text-[#005BB5] robotosemibold"
+                  >
+                   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8.99998 15.0002H15.75M2.25 15.0002H3.50591C3.87279 15.0002 4.05624 15.0002 4.22887 14.9587C4.38192 14.922 4.52824 14.8614 4.66245 14.7791C4.81382 14.6864 4.94354 14.5567 5.20296 14.2972L14.625 4.87517C15.2463 4.25385 15.2463 3.24649 14.625 2.62517C14.0037 2.00385 12.9963 2.00385 12.375 2.62517L2.95295 12.0472C2.69352 12.3067 2.5638 12.4364 2.47104 12.5877C2.3888 12.722 2.32819 12.8683 2.29145 13.0213C2.25 13.194 2.25 13.3774 2.25 13.7443V15.0002Z" stroke="#67778E" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+
+                  </button>
+                </div>
+                <div>
+                  <p className="text-[14px] text-[#333333CC]  robotomedium mb-2">Services</p>
+                  <div className="flex flex-wrap gap-2">
+                    {client.services.map((service, serviceIndex) => (
+                      <span
+                        key={serviceIndex}
+                        className="text-[10px] text-[#67778E] bg-[#67778E0A] robotomedium border border-[#DADDE2] rounded-[58px] px-[10px] py-[5px]"
+                      >
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          {/* Table Header */}
+          <div className="grid grid-cols-[30px_200px_1fr_100px] bg-[#FAFAFC] px-[14px] py-[11px] items-center gap-x-[20px] min-w-[600px]">
+            <div className="flex items-center justify-center">
+              <input
+                type="checkbox"
+                checked={selectAll}
+                onChange={handleSelectAll}
+              />
+            </div>
+            <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
+              Clients Name
+            </p>
+            <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
+              Services
+            </p>
+            <p className="robotosemibold text-[18px] text-[#333333CC] whitespace-nowrap">
+              Actions
+            </p>
+          </div>
+
+          {/* Table Rows */}
+          {clients.length === 0 ? (
+            <div className="flex justify-center items-center h-[calc(100vh-150px)]">
+              <p className="text-gray-500 text-[16px]">No Client List Available</p>
+            </div>
+          ) : (
+            clients.map((client, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-[30px_200px_1fr_100px] bg-white px-[14px] pt-[20px] pb-[11px] border-b border-[#E5E7EB] gap-x-[20px] min-w-[600px]"
+              >
+                <div className="flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedClients.includes(client._id)}
+                    onChange={() => handleSelectClient(client._id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <p className="text-[15px] text-[#333333] whitespace-nowrap">
+                  {client.name}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {client.services.map((service, serviceIndex) => (
+                    <span
+                      key={serviceIndex}
+                      className="text-[15px] text-[#555555] bg-white border border-[#DADDE2] rounded-full px-3 py-1"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  onClick={() => openModal(client)}
+                  className="text-[14px] text-[#0078BD] robotosemibold hover:text-[#005BB5] cursor-pointer"
+                >
+                  Edit
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -388,11 +488,11 @@ const Clientlist = () => {
       {/* Update Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-[#0000009f] bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[8px] p-6 w-[90%] max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-[8px] p-4 sm:p-6 w-[90%] max-w-[600px] max-h-[80vh] overflow-y-auto">
             <h2 className="text-[#1E293B] text-[20px] font-semibold mb-4">Update Client</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-[#1E293B] text-[14px] mb-2 roboto-medium">
+                <label className="block text-[#1E293B] text-[14px] mb-2 robotomedium">
                   Client Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -405,29 +505,29 @@ const Clientlist = () => {
                 />
               </div>
               <div>
-                <label className="block text-[#1E293B] text-[14px] mb-2 roboto-medium">
+                <label className="block text-[#1E293B] text-[14px] mb-2 robotomedium">
                   Services
                 </label>
                 {services.map((service, index) => (
                   <div key={index} className="mb-4 border border-[#E2E8F0] p-3 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">Service Name</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Service Name</label>
                         <input
                           type="text"
                           value={service.name}
                           onChange={(e) => handleServiceChange(index, 'name', e.target.value)}
                           placeholder="Enter service name"
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px] text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                           disabled={isSubmitting}
                         />
                       </div>
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">Type</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Type</label>
                         <select
                           value={service.type}
                           onChange={(e) => handleServiceChange(index, 'type', e.target.value)}
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                           disabled={isSubmitting}
                         >
                           <option value="fixed">Fixed</option>
@@ -436,69 +536,69 @@ const Clientlist = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">Base Rate</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Base Rate</label>
                         <input
                           type="number"
                           value={service.baseRate}
                           onChange={(e) => handleServiceChange(index, 'baseRate', e.target.value)}
                           placeholder="Enter base rate"
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                           disabled={isSubmitting}
                         />
                       </div>
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">HST</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">HST</label>
                         <input
                           type="number"
                           value={service.hst}
                           onChange={(e) => handleServiceChange(index, 'hst', e.target.value)}
                           placeholder="Enter HST"
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                           disabled={isSubmitting}
                         />
                       </div>
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">Total</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Total</label>
                         <input
                           type="number"
                           value={service.total}
                           readOnly
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] bg-gray-100"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] bg-gray-100"
                           disabled
                         />
                       </div>
                       <div>
-                        <label className="block text-[#1E293B] text-[12px] mb-1">Free Units</label>
+                        <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Free Units</label>
                         <input
                           type="number"
                           value={service.freeUnits}
                           onChange={(e) => handleServiceChange(index, 'freeUnits', e.target.value)}
                           placeholder="Enter free units"
-                          className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                          className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                           disabled={isSubmitting}
                         />
                       </div>
                       {service.name.startsWith('PR1') && (
                         <>
                           <div>
-                            <label className="block text-[#1E293B] text-[12px] mb-1">Unit Type</label>
+                            <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Unit Type</label>
                             <input
                               type="text"
                               value={service.unitType || ''}
                               onChange={(e) => handleServiceChange(index, 'unitType', e.target.value || null)}
                               placeholder="Enter unit type"
-                              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                              className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                               disabled={isSubmitting}
                             />
                           </div>
                           <div>
-                            <label className="block text-[#1E293B] text-[12px] mb-1">Unit Quantity</label>
+                            <label className="block text-[#333333] robotomedium  text-[12px] mb-1">Unit Quantity</label>
                             <input
                               type="number"
                               value={service.unitQuantity || ''}
                               onChange={(e) => handleServiceChange(index, 'unitQuantity', e.target.value || null)}
                               placeholder="Enter unit quantity"
-                              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1 text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+                              className="w-full border border-[#E2E8F0] rounded-md px-[14px] py-[8px]  text-[12px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
                               disabled={isSubmitting}
                             />
                           </div>
@@ -518,7 +618,7 @@ const Clientlist = () => {
                 ))}
                 <button
                   onClick={addService}
-                  className="text-[#0077CC] text-[14px] hover:text-[#005BB5]"
+                  className="text-[#0077CC] text-[14px] robotomedium  hover:text-[#005BB5]"
                   disabled={isSubmitting}
                 >
                   + Add Service
@@ -528,14 +628,14 @@ const Clientlist = () => {
             <div className="flex justify-end mt-6 gap-3">
               <button
                 onClick={closeModal}
-                className="px-5 py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[14px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2 rounded-md robotomedium border border-[#CBD5E1] text-[#475569] text-[14px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdateClient}
-                className="px-5 py-2 rounded-md bg-[#0077CC] text-white text-[14px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2 rounded-md robotomedium bg-[#0077CC] text-white text-[14px] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

@@ -71,7 +71,6 @@ const CallRecorded = () => {
     // Apply date range filter
     if (fromDate || toDate) {
       if (fromDate && toDate) {
-        // Range filter
         const from = new Date(fromDate + "T00:00:00Z");
         const to = new Date(toDate + "T23:59:59.999Z");
         filtered = filtered.filter((call) => {
@@ -82,7 +81,6 @@ const CallRecorded = () => {
           return false;
         });
       } else if (fromDate) {
-        // Single date filter
         const from = new Date(fromDate + "T00:00:00Z");
         const to = new Date(fromDate + "T23:59:59.999Z");
         filtered = filtered.filter((call) => {
@@ -197,7 +195,7 @@ const CallRecorded = () => {
             : "0.00",
           total: call.totalEarnings ? Number(call.totalEarnings).toFixed(2) : "0.00",
           date: call.date || call.createdAt,
-          status: call.status || (index % 2 === 0 ? "Approved" : "Pending"),
+          status: call.status || (index % 2 === 0 ? "Verified" : "Unverified"),
           servicesUsed: call.servicesUsed?.map((service) => ({
             ...service,
             baseRate: service.baseRate ? Number(service.baseRate).toFixed(2) : "0.00",
@@ -318,8 +316,9 @@ const CallRecorded = () => {
           body: JSON.stringify({ callIds }),
         }).then((response) => {
           if (!response.ok) {
-            const errorData = response.json();
-            throw new Error(errorData.message || "Failed to delete calls");
+            return response.json().then((errorData) => {
+              throw new Error(errorData.message || "Failed to delete calls");
+            });
           }
           return response;
         })
@@ -478,41 +477,69 @@ const CallRecorded = () => {
 
   if (loading) {
     return (
-      <div className="border border-[#F7F7F7] p-4 animate-pulse">
-        <div className="flex justify-between items-center px-4 py-2 bg-white">
-          <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+      <>
+        {/* Mobile Loading */}
+        <div className="md:hidden border border-[#F7F7F7] p-4 animate-pulse">
+          <div className="flex justify-between items-center px-4 py-2 bg-white">
+            <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+          </div>
+          {[...Array(5)].map((_, idx) => (
+            <div key={idx} className="bg-white border-b border-[#E6E6E6] mx-4 mb-2 p-4 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                </div>
+                <div className="h-4 w-20 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-4 w-48 bg-gray-200 rounded mb-2"></div>
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-12 bg-gray-200 rounded"></div>
+                <div className="h-3 w-16 bg-gray-200 rounded"></div>
+              </div>
+              <div className="h-4 w-24 bg-gray-200 rounded mt-2"></div>
+            </div>
+          ))}
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse rounded-lg ">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3">
-                  <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
-                </th>
-                {[...Array(9)].map((_, i) => (
-                  <th key={i} className="px-6 py-3">
-                    <div className="h-4 w-1/3 bg-gray-300 rounded"></div>
+        {/* Desktop Loading */}
+        <div className="hidden md:block border border-[#F7F7F7] p-4 animate-pulse">
+          <div className="flex justify-between items-center px-4 py-2 bg-white">
+            <div className="h-6 w-1/4 bg-gray-300 rounded"></div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3">
+                    <div className="h-4 w-[20px] bg-gray-300 rounded"></div>
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[...Array(5)].map((_, idx) => (
-                <tr key={idx} className="border-b border-[#E6E6E6]">
-                  <td className="px-6 py-4 bg-white">
-                    <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
-                  </td>
-                  {[...Array(9)].map((_, j) => (
-                    <td key={j} className="px-6 py-4 bg-white">
-                      <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
-                    </td>
+                  {[...Array(10)].map((_, i) => (
+                    <th key={i} className="px-6 py-3">
+                      <div className="h-4 w-1/3 bg-gray-300 rounded"></div>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[...Array(5)].map((_, idx) => (
+                  <tr key={idx} className="border-b border-[#E6E6E6]">
+                    <td className="px-6 py-4 bg-white">
+                      <div className="h-4 w-[20px] bg-gray-200 rounded"></div>
+                    </td>
+                    {[...Array(10)].map((_, j) => (
+                      <td key={j} className="px-6 py-4 bg-white">
+                        <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -525,360 +552,521 @@ const CallRecorded = () => {
   }
 
   return (
-    <div className="border border-[#F7F7F7] p-6">
-    {selectedCalls.length > 0 && (
-  <div className="flex flex-wrap gap-3 p-3 bg-gray-100  justify-end md:justify-between items-center rounded-md shadow-sm">
-    {/* Selected Info (optional – can show how many selected) */}
-    <p className="text-sm text-gray-700 hidden md:block">
-      {selectedCalls.length} call{selectedCalls.length > 1 ? "s" : ""} selected
-    </p>
-
-    {/* Action Buttons */}
-    <div className="flex flex-wrap justify-end w-full sm:w-auto gap-3">
-      <button
-        onClick={() => setShowDeleteModal(true)}
-        className="flex-1 sm:flex-none bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm font-medium transition-all duration-200"
-      >
-        Delete
-      </button>
-      <button
-        onClick={handleCancelSelection}
-        className="flex-1 sm:flex-none bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 text-sm font-medium transition-all duration-200"
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-)}
-
-
-    <div className="flex flex-col px-4 py-2 bg-white">
-  <h2 className="robotomedium text-[20px] mb-4">
-    Call Recorded
-  </h2>
-  {/* Tabs */}
-  <div className="flex flex-col md:flex-row md:items-center md:justify-between py-5 gap-4 md:gap-0">
-    <div></div>
-    <div className="flex flex-col md:flex-row md:justify-end items-start md:items-center gap-4 w-full md:w-auto">
-      {/* Search Bar */}
-      <div className="relative w-full md:min-w-[250px]">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          placeholder="Search by Driver, Client Name or Call No"
-          className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => {
-              setSearchQuery("");
-            }}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
-      <div className="relative w-full md:min-w-[250px]" ref={datePickerRef}>
-        <div
-          onClick={() => setShowDatePicker(!showDatePicker)}
-          className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        >
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-          <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
-            {getDateRangeText()}
-          </span>
-          {(fromDate || toDate) && (
+    <div className="border border-[#F7F7F7] p-0 sm:p-6">
+      {selectedCalls.length > 0 && (
+        <div className="flex flex-wrap gap-3 p-3 bg-gray-100 justify-end md:justify-between items-center rounded-md shadow-sm">
+          <p className="text-sm text-gray-700 hidden md:block">
+            {selectedCalls.length} call{selectedCalls.length > 1 ? "s" : ""} selected
+          </p>
+          <div className="flex flex-wrap justify-end w-full sm:w-auto gap-3">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                clearDates();
-              }}
-              className="text-gray-400 hover:text-gray-600"
+              onClick={() => setShowDeleteModal(true)}
+              className="flex-1 sm:flex-none bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm font-medium transition-all duration-200 cursor-pointer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              Delete
             </button>
-          )}
+            <button
+              onClick={handleCancelSelection}
+              className="flex-1 sm:flex-none bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 text-sm font-medium transition-all duration-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
+      )}
 
-        {showDatePicker && (
-          <div className="absolute top-full mt-2 left-0 md:right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-full md:w-80">
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col px-4 py-2 bg-white">
+        <h2 className="robotomedium text-[20px] mb-4">
+          Call Records
+        </h2>
+        {/* Tabs */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between py-5 gap-4 md:gap-0">
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setActiveTab("All")}
+              className={`text-[16px] robotomedium pb-2 cursor-pointer ${
+                activeTab === "All"
+                  ? "text-gray-700 border-b-2 border-gray-700"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              All ({allCount})
+            </button>
+            <button
+              onClick={() => setActiveTab("Verified")}
+              className={`text-[16px] robotomedium pb-2 cursor-pointer ${
+                activeTab === "Verified"
+                  ? "text-[#18CC6C] border-b-2 border-[#18CC6C]"
+                  : "text-[#18CC6C] hover:text-[#16a34a]"
+              }`}
+            >
+              Verified ({verifiedCount})
+            </button>
+            <button
+              onClick={() => setActiveTab("Unverified")}
+              className={`text-[16px] robotomedium pb-2 cursor-pointer ${
+                activeTab === "Unverified"
+                  ? "text-[#FFA500] border-b-2 border-[#FFA500]"
+                  : "text-[#FFA500] hover:text-[#e69500]"
+              }`}
+            >
+              Unverified ({unverifiedCount})
+            </button>
+          </div>
+          <div className="flex flex-col md:flex-row md:justify-end items-start md:items-center gap-4 w-full md:w-auto">
+            {/* Search Bar */}
+            <div className="relative w-full md:min-w-[250px]">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search by Driver, Client Name or Call No"
+                className="border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
+              />
+              {searchQuery && (
                 <button
-                  onClick={handlePreviousMonth}
-                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setSearchQuery("");
+                  }}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
+                      d="M6 18L18 6M6 6l12 12"
                     />
                   </svg>
                 </button>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">
-                    {currentDate.toLocaleString("en-US", { month: "long" })}
-                  </span>
-                  <select
-                    value={selectedYear}
-                    onChange={handleYearChange}
-                    className="text-sm font-medium text-gray-700 border rounded px-2 py-1"
-                  >
-                    {generateYearOptions().map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleNextMonth}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                {selectingFrom ? "Select Start Date" : "Select End Date"}
-              </p>
-              <div className="flex space-x-2 text-xs">
-                <span
-                  className={`px-2 py-1 rounded ${
-                    fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  From: {fromDate ? formatDate(fromDate) : "Not selected"}
-                </span>
-                <span
-                  className={`px-2 py-1 rounded ${
-                    toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
-                  }`}
-                >
-                  To: {toDate ? formatDate(toDate) : "Not selected"}
-                </span>
-              </div>
+              )}
             </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
-                  {day}
-                </div>
-              ))}
-              {generateCalendarDays().map((date, index) => {
-                const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
-                const isToday = date.toISOString().split("T")[0] === new Date("2025-10-06T13:01:00Z").toISOString().split("T")[0];
-                const isSelected = isDateSelected(date);
-                const isInRange = isDateInRange(date);
-                const dateStr = date.toISOString().split("T")[0];
-
-                return (
+            <div className="relative w-full md:min-w-[250px]" ref={datePickerRef}>
+              <div
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="flex items-center space-x-2 border border-gray-300 rounded px-4 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span className={`flex-1 ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"}`}>
+                  {getDateRangeText()}
+                </span>
+                {(fromDate || toDate) && (
                   <button
-                    key={index}
-                    onClick={() => handleDateSelect(dateStr)}
-                    className={`
-                      text-sm py-2 hover:bg-blue-50 rounded transition-colors
-                      ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
-                      ${isToday ? "font-bold text-blue-600" : ""}
-                      ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
-                      ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
-                    `}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      clearDates();
+                    }}
+                    className="text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
-                    {date.getUTCDate()}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
                   </button>
-                );
-              })}
-            </div>
+                )}
+              </div>
 
-            <div className="flex justify-between items-center pt-2 border-t">
-              <button
-                onClick={clearDates}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => {
-                  setShowDatePicker(false);
-                  if (fromDate && !toDate) {
-                    setToDate(fromDate);
-                  }
-                  setSelectingFrom(true);
-                }}
-                className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-              >
-                Done
-              </button>
+              {showDatePicker && (
+                <div className="absolute top-full mt-2 left-0 md:right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-full md:w-80">
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={handlePreviousMonth}
+                        className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 19l-7-7 7-7"
+                          />
+                        </svg>
+                      </button>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          {currentDate.toLocaleString("en-US", { month: "long" })}
+                        </span>
+                        <select
+                          value={selectedYear}
+                          onChange={handleYearChange}
+                          className="text-sm font-medium text-gray-700 border rounded px-2 py-1 cursor-pointer"
+                        >
+                          {generateYearOptions().map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={handleNextMonth}
+                        className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      {selectingFrom ? "Select Start Date" : "Select End Date"}
+                    </p>
+                    <div className="flex space-x-2 text-xs">
+                      <span
+                        className={`px-2 py-1 rounded ${
+                          fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded ${
+                          toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        To: {toDate ? formatDate(toDate) : "Not selected"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                      <div key={day} className="text-center text-xs font-medium text-gray-500 py-2">
+                        {day}
+                      </div>
+                    ))}
+                    {generateCalendarDays().map((date, index) => {
+                      const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
+                      const isToday = date.toISOString().split("T")[0] === new Date("2025-10-06T13:01:00Z").toISOString().split("T")[0];
+                      const isSelected = isDateSelected(date);
+                      const isInRange = isDateInRange(date);
+                      const dateStr = date.toISOString().split("T")[0];
+
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => handleDateSelect(dateStr)}
+                          className={`
+                            text-sm py-2 hover:bg-blue-50 rounded transition-colors cursor-pointer
+                            ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                            ${isToday ? "font-bold text-blue-600" : ""}
+                            ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                            ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
+                          `}
+                        >
+                          {date.getUTCDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2 border-t">
+                    <button
+                      onClick={clearDates}
+                      className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDatePicker(false);
+                        if (fromDate && !toDate) {
+                          setToDate(fromDate);
+                        }
+                        setSelectingFrom(true);
+                      }}
+                      className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
+
+        
       </div>
-    </div>
-  </div>
-</div>
 
-
-
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse rounded-lg ">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th className="px-6 py-3 text-left">Driver</th>
-              <th className="px-6 py-3 text-left">Client</th>
-              <th className="px-6 py-3 text-left">Call No</th>
-              <th className="px-6 py-3 text-left">Services</th>
-              <th className="px-6 py-3 text-left">REMS</th>
-              <th className="px-6 py-3 text-left">RPM</th>
-              <th className="px-6 py-3 text-left">PR1</th>
-              <th className="px-6 py-3 text-left">Total</th>
-              <th className="px-6 py-3 text-left">Date</th>
-              {/* <th className="px-6 py-3 text-left">Status</th> */}
-            </tr>
-          </thead>
-          <tbody>
-            {currentItems.length === 0 ? (
-              <tr>
-                <td
-                  colSpan="10"
-                  className="px-6 py-4 text-center text-gray-500 bg-white"
-                >
-                  No Call History Available
-                </td>
-              </tr>
-            ) : (
-              currentItems.map((call, idx) => (
-                <tr
-                  key={idx}
-                  className="border-b border-[#E6E6E6] hover:bg-gray-50"
-                >
-                  <td className="px-6 py-4 bg-white">
-                    <input
-                      type="checkbox"
-                      checked={selectedCalls.includes(call._id)}
-                      onChange={() => handleSelectCall(call._id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </td>
-                  <td className="px-6 py-4 bg-white whitespace-nowrap">{call.driverName}</td>
-                  <td className="px-6 py-4 bg-white whitespace-nowrap">{call.clientName}</td>
-                  <td className="px-6 py-4 bg-white">{call.call}</td>
-                  <td className="px-6 py-4 bg-white">
-                    <div className="flex gap-2 flex-wrap">
-                      {call.services.map((service, sIdx) => (
-                        <span
-                          key={sIdx}
-                          className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
-                          onClick={() => handleServiceClick(call, service.name)}
+      {/* Mobile Layout */}
+      <div className="md:hidden space-y-4 px-0 pb-4">
+        {currentItems.length === 0 ? (
+          <div className="flex justify-center items-center py-8">
+            <p className="text-gray-500 text-[16px]">No Call History Available</p>
+          </div>
+        ) : (
+          currentItems.map((call, idx) => (
+            <div
+              key={idx}
+              className="bg-white border border-[#E5E7EB] shadow-sm rounded-lg p-4"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-3 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedCalls.includes(call._id)}
+                    onChange={() => handleSelectCall(call._id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div className="flex-1">
+                    <p className="text-[15px] text-[#333333] robotomedium">
+                      {call.driverName}
+                    </p>
+                    <p className="text-[12px] text-[#555555] robotomedium">
+                      {call.clientName}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 relative status-dropdown">
+                  <span
+                    style={{
+                      color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
+                    }}
+                    className="cursor-pointer flex items-center robotomedium text-sm"
+                    onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
+                  >
+                    {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
+                    <FaChevronDown className="inline-block ml-1 w-3 h-3" />
+                  </span>
+                  {showStatusDropdown === call._id && (
+                    <div className="absolute z-10 bg-white border robotomedium border-gray-300 rounded-lg shadow-lg mt-1 w-32 right-0">
+                      {["verified", "unverified"].map((status) => (
+                        <div
+                          key={status}
+                          className={`px-4 py-2 text-sm cursor-pointer hover:bg-blue-100 ${
+                            (activeTab === "Verified" && status === "verified") ||
+                            (activeTab === "Unverified" && status === "unverified")
+                              ? "bg-[#a1a0a02f] robotomedium text-black"
+                              : ""
+                          }`}
+                          onClick={() => handleUpdateStatus(call._id, status)}
                         >
-                          {service.name}
-                        </span>
+                          {capitalizeFirstLetter(status)}
+                        </div>
                       ))}
                     </div>
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  )}
+                </div>
+              </div>
+              <p className="text-[14px] text-[#555555] robotomedium  mb-3">
+                Call No: {call.call}
+              </p>
+              <div className="mb-3">
+                <p className="text-[14px] text-[#555555] robotomedium mb-2">Services</p>
+                <div className="flex flex-wrap gap-2">
+                  {call.services.map((service, sIdx) => (
+                    <span
+                      key={sIdx}
+                      className=" robotomedium  text-[#67778E] bg-[#67778E0A] rounded-full px-3 py-1 text-[12px] cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, service.name)}
+                    >
+                      {service.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div className="flex flex-col items-start">
+                  <p className="text-[12px] text-[#555555] robotomedium">REMS</p>
+                  <p
+                    className="text-[14px] robotomedium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
                   >
                     {formatValue(call.rem)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-start">
+                  <p className="text-[12px] text-[#555555] robotomedium">RPM</p>
+                  <p
+                    className="text-[14px] robotomedium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
                   >
                     {formatValue(call.rpm)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-start">
+                  <p className="text-[12px] text-[#555555] robotomedium">PR1</p>
+                  <p
+                    className="text-[14px] robotomedium cursor-pointer hover:text-blue-600"
                     onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
                   >
                     {formatValue(call.pr1)}
-                  </td>
-                  <td
-                    className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                  </p>
+                </div>
+                <div className="flex flex-col items-start">
+                  <p className="text-[12px] text-[#555555] robotomedium">Total</p>
+                  <p
+                    className="text-[14px] robotosemibold  text-[#0078BD] cursor-pointer hover:text-blue-700"
                     onClick={() => handleTotalClick(call)}
                   >
                     ${formatValue(call.total)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-start">
+                <p className="text-[14px] text-[#555555] robotosemibold  ">
+                  Date: {formatDate(call.date)}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Layout */}
+      <div className="hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse rounded-lg min-w-[1000px]">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+                <th className="px-6 py-3 text-left">Driver</th>
+                <th className="px-6 py-3 text-left">Client</th>
+                <th className="px-6 py-3 text-left">Call No</th>
+                <th className="px-6 py-3 text-left">Services</th>
+                <th className="px-6 py-3 text-left">REMS</th>
+                <th className="px-6 py-3 text-left">RPM</th>
+                <th className="px-6 py-3 text-left">PR1</th>
+                <th className="px-6 py-3 text-left">Total</th>
+                <th className="px-6 py-3 text-left">Date</th>
+                <th className="px-6 py-3 text-left">Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {currentItems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="11"
+                    className="px-6 py-4 text-center text-gray-500 bg-white"
+                  >
+                    No Call History Available
                   </td>
-                  <td className="px-6 py-4 bg-white">{formatDate(call.date)}</td>
-                  {/* <td className="px-6 py-4 bg-white relative status-dropdown">
-                    <span
-                      style={{
-                        color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
-                      }}
-                      className="cursor-pointer flex items-center"
-                      onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
-                    >
-                      {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
-                      <FaChevronDown className="inline-block ml-1 w-3 h-3" />
-                    </span>
-                    {showStatusDropdown === call._id && (
-                      <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-32">
-                        {["verified", "unverified"].map((status) => (
-                          <div
-                            key={status}
-                            className="px-4 py-2 text-sm hover:bg-blue-100 cursor-pointer"
-                            onClick={() => handleUpdateStatus(call._id, status)}
+                </tr>
+              ) : (
+                currentItems.map((call, idx) => (
+                  <tr
+                    key={idx}
+                    className="border-b border-[#E6E6E6] hover:bg-gray-50"
+                  >
+                    <td className="px-6 py-4 bg-white">
+                      <input
+                        type="checkbox"
+                        checked={selectedCalls.includes(call._id)}
+                        onChange={() => handleSelectCall(call._id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td className="px-6 py-4 bg-white whitespace-nowrap">{call.driverName}</td>
+                    <td className="px-6 py-4 bg-white whitespace-nowrap">{call.clientName}</td>
+                    <td className="px-6 py-4 bg-white">{call.call}</td>
+                    <td className="px-6 py-4 bg-white">
+                      <div className="flex gap-2 flex-wrap">
+                        {call.services.map((service, sIdx) => (
+                          <span
+                            key={sIdx}
+                            className="border rounded-full px-2.5 py-0.5 text-sm cursor-pointer hover:text-blue-600"
+                            onClick={() => handleServiceClick(call, service.name)}
                           >
-                            {capitalizeFirstLetter(status)}
-                          </div>
+                            {service.name}
+                          </span>
                         ))}
                       </div>
-                    )}
-                  </td> */}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+                    >
+                      {formatValue(call.rem)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+                    >
+                      {formatValue(call.rpm)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+                    >
+                      {formatValue(call.pr1)}
+                    </td>
+                    <td
+                      className="px-6 py-4 bg-white cursor-pointer hover:text-blue-600"
+                      onClick={() => handleTotalClick(call)}
+                    >
+                      ${formatValue(call.total)}
+                    </td>
+                    <td className="px-6 py-4 bg-white">{formatDate(call.date)}</td>
+                    <td className="px-6 py-4 bg-white relative status-dropdown">
+                      <span
+                        style={{
+                          color: call.status.toLowerCase() === "pending" || call.status.toLowerCase() === "unverified" ? "#FFA500" : "#18CC6C",
+                        }}
+                        className="cursor-pointer flex items-center"
+                        onClick={() => setShowStatusDropdown(showStatusDropdown === call._id ? null : call._id)}
+                      >
+                        {capitalizeFirstLetter(call.status.toLowerCase() === "pending" ? "Unverified" : call.status)}
+                        <FaChevronDown className="inline-block ml-1 w-3 h-3" />
+                      </span>
+                      {showStatusDropdown === call._id && (
+                        <div className="absolute z-10 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-32 left-0">
+                          {["verified", "unverified"].map((status) => (
+                            <div
+                              key={status}
+                              className={`px-4 py-2 text-sm cursor-pointer hover:bg-blue-100 ${
+                                (activeTab === "Verified" && status === "verified") ||
+                                (activeTab === "Unverified" && status === "unverified")
+                                  ? "bg-[#a1a0a02f] text-black"
+                                  : ""
+                              }`}
+                              onClick={() => handleUpdateStatus(call._id, status)}
+                            >
+                              {capitalizeFirstLetter(status)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-4 robotomedium">
           <div className="text-sm text-gray-700">
             Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, calls.length)} of {calls.length} entries
           </div>
@@ -886,7 +1074,7 @@ const CallRecorded = () => {
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Previous
             </button>
@@ -894,7 +1082,7 @@ const CallRecorded = () => {
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               Next
             </button>
@@ -905,7 +1093,7 @@ const CallRecorded = () => {
       {/* Client Details Modal */}
       {showClientModal && selectedClientRecord && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] ">
+          <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Call Details</h2>
               <button
@@ -913,7 +1101,7 @@ const CallRecorded = () => {
                   setShowClientModal(false);
                   setSelectedServiceName(null);
                 }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               >
                 <svg
                   className="w-6 h-6"
@@ -1021,7 +1209,7 @@ const CallRecorded = () => {
                   setShowClientModal(false);
                   setSelectedServiceName(null);
                 }}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
               >
                 Close
               </button>
@@ -1031,32 +1219,32 @@ const CallRecorded = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-  {showDeleteModal && (
-  <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 p-4">
-    <div className="bg-white rounded-lg p-4 sm:p-6 shadow-lg w-full max-w-[400px]">
-      <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
-      <p className="mb-6">
-        Are you sure you want to delete{" "}
-        <span className="font-bold">{selectedCalls.length}</span> call(s)?
-      </p>
-      <div className="flex flex-col sm:flex-row justify-end gap-3">
-        <button
-          onClick={() => setShowDeleteModal(false)}
-          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 w-full sm:w-auto"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={deleteLoading}
-          className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 w-full sm:w-auto"
-        >
-          {deleteLoading ? "Deleting..." : "Delete"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+      {showDeleteModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-6 shadow-lg w-full max-w-[400px]">
+            <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
+            <p className="mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-bold">{selectedCalls.length}</span> call(s)?
+            </p>
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 w-full sm:w-auto cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto cursor-pointer"
+              >
+                {deleteLoading ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
