@@ -178,7 +178,7 @@ const Cards = () => {
 
       {/* Right Card (Cycle Earnings Summary) */}
       <div
-        className="w-1/2 bg-white px-[14px] py-[22px] rounded-[8px]"
+        className=" w-full lg:w-1/2 bg-white px-[14px] py-[22px] rounded-[8px]"
         style={{ boxShadow: '0px 0px 16px #E3EBFC' }}
       >
         <p className="text-[#1E293B] text-[14px] robotomedium">Cycle Earnings Summary</p>

@@ -12,6 +12,7 @@ const Earninghistory = () => {
   const [selectingFrom, setSelectingFrom] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState(new Date().getUTCFullYear());
+  const [isMobile, setIsMobile] = useState(false);
   const datePickerRef = useRef(null);
   const [totals, setTotals] = useState({
     totalCalls: 0,
@@ -24,10 +25,21 @@ const Earninghistory = () => {
     totalRpmHst: 0,
     totalPr1Subtotal: 0,
     totalPr1Hst: 0,
+    totalRems: 0,
+    totalRpm: 0,
+    totalPr1: 0,
     pr1RpmRemsSubtotal: 0,
     pr1RpmRemsHst: 0,
     pr1RpmRemsEarnings: 0,
   });
+
+  // Check for mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Fetch data from API with token
   const fetchData = async () => {
@@ -89,22 +101,6 @@ const Earninghistory = () => {
       console.log("Mapped Data:", mappedData); // Debug: Log mapped data
 
       setData(mappedData);
-      setTotals({
-        totalCalls: Number(apiData.totals?.totalCalls || 0),
-        totalSubtotal: Number(apiData.totals?.totalSubtotal || 0),
-        totalHst: Number(apiData.totals?.totalHst || 0),
-        totalEarnings: Number(apiData.totals?.totalEarnings || 0),
-        totalRemsSubtotal: Number(apiData.totals?.totalRemsSubtotal || 0),
-        totalRemsHst: Number(apiData.totals?.totalRemsHst || 0),
-        totalRpmSubtotal: Number(apiData.totals?.totalRpmSubtotal || 0),
-        totalRpmHst: Number(apiData.totals?.totalRpmHst || 0),
-        totalPr1Subtotal: Number(apiData.totals?.totalPr1Subtotal || 0),
-        totalPr1Hst: Number(apiData.totals?.totalPr1Hst || 0),
-        pr1RpmRemsSubtotal: Number(apiData.totals?.pr1RpmRemsSubtotal || 0),
-        pr1RpmRemsHst: Number(apiData.totals?.pr1RpmRemsHst || 0),
-        pr1RpmRemsEarnings: Number(apiData.totals?.pr1RpmRemsEarnings || 0),
-      });
-
       // Set filteredData to all data by default
       setFilteredData(mappedData);
     } catch (err) {
@@ -119,6 +115,56 @@ const Earninghistory = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Calculate totals based on filteredData
+  useEffect(() => {
+    if (filteredData.length === 0) return;
+
+    const calcTotals = filteredData.reduce(
+      (acc, item) => {
+        acc.totalCalls += item.calls;
+        acc.totalRems += item.rems;
+        acc.totalRpm += item.rpm;
+        acc.totalPr1 += item.pr1;
+        acc.totalRemsSubtotal += item.remsSubtotal;
+        acc.totalRpmSubtotal += item.rpmSubtotal;
+        acc.totalPr1Subtotal += item.pr1Subtotal;
+        acc.totalRemsHst += item.remsHst;
+        acc.totalRpmHst += item.rpmHst;
+        acc.totalPr1Hst += item.pr1Hst;
+        acc.totalSubtotal += item.subtotal;
+        acc.totalHst += item.hst;
+        acc.totalEarnings += item.earnings;
+        return acc;
+      },
+      {
+        totalCalls: 0,
+        totalRems: 0,
+        totalRpm: 0,
+        totalPr1: 0,
+        totalRemsSubtotal: 0,
+        totalRpmSubtotal: 0,
+        totalPr1Subtotal: 0,
+        totalRemsHst: 0,
+        totalRpmHst: 0,
+        totalPr1Hst: 0,
+        totalSubtotal: 0,
+        totalHst: 0,
+        totalEarnings: 0,
+      }
+    );
+
+    const pr1RpmRemsSubtotal = calcTotals.totalRemsSubtotal + calcTotals.totalRpmSubtotal + calcTotals.totalPr1Subtotal;
+    const pr1RpmRemsHst = calcTotals.totalRemsHst + calcTotals.totalRpmHst + calcTotals.totalPr1Hst;
+    const pr1RpmRemsEarnings = calcTotals.totalEarnings;
+
+    setTotals({
+      ...calcTotals,
+      pr1RpmRemsSubtotal,
+      pr1RpmRemsHst,
+      pr1RpmRemsEarnings,
+    });
+  }, [filteredData]);
 
   // Update filtered data when date range changes
   useEffect(() => {
@@ -288,6 +334,296 @@ const Earninghistory = () => {
 
   if (loading) return <TableShimmer />;
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div >
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-[#1E293B] text-[16px] font-semibold">Earning History</h2>
+          </div>
+
+          {/* Date Range Picker */}
+          <div className="relative" ref={datePickerRef}>
+            <div
+              onClick={() => setShowDatePicker((prev) => !prev)}
+              className="flex items-center space-x-2 border border-gray-300 rounded px-3 py-2 cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white min-w-[200px]"
+              
+            >
+              <svg
+                className="w-5 h-5 text-gray-400 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <span
+                className={`flex-1 truncate ${!fromDate && !toDate ? "text-gray-400" : "text-gray-700"} text-sm`}
+              >
+                {getDateRangeText()}
+              </span>
+              {(fromDate || toDate) && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearDates();
+                  }}
+                  className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {showDatePicker && (
+              <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3 w-72 sm:w-80">
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <button
+                      onClick={handlePreviousMonth}
+                      className="text-gray-500 hover:text-gray-700 p-1"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
+                    </button>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">
+                        {currentDate.toLocaleString("en-US", { month: "long", timeZone: "UTC" })}
+                      </span>
+                      <select
+                        value={selectedYear}
+                        onChange={handleYearChange}
+                        className="text-xs sm:text-sm font-medium text-gray-700 border rounded px-1 py-0.5"
+                      >
+                        {generateYearOptions().map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleNextMonth}
+                      className="text-gray-500 hover:text-gray-700 p-1"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                    {selectingFrom ? "Select Start Date" : "Select End Date"}
+                  </p>
+                  <div className="flex flex-col space-y-1 text-xs">
+                    <span
+                      className={`px-2 py-0.5 rounded ${fromDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                    >
+                      From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded ${toDate ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"
+                        }`}
+                    >
+                      To: {toDate ? formatDate(toDate) : "Not selected"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-0.5 mb-2">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-xs font-medium text-gray-500 py-1"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                  {generateCalendarDays().map((date, index) => {
+                    const isCurrentMonth = date.getUTCMonth() === currentDate.getUTCMonth();
+                    const isToday =
+                      date.toISOString().split("T")[0] === new Date().toISOString().split("T")[0];
+                    const isSelected = isDateSelected(date);
+                    const isInRange = isDateInRange(date);
+                    const dateStr = date.toISOString().split("T")[0];
+
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => handleDateSelect(dateStr)}
+                        className={`
+                          text-xs py-1 hover:bg-blue-50 rounded transition-colors
+                          ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                          ${isToday ? "font-bold text-blue-600" : ""}
+                          ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                          ${isInRange && !isSelected ? "bg-blue-100 text-blue-700" : ""}
+                        `}
+                      >
+                        {date.getUTCDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between items-center pt-1.5 border-t text-xs">
+                  <button
+                    onClick={clearDates}
+                    className="text-gray-500 hover:text-gray-700 px-1"
+                  >
+                    Clear
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDatePicker(false);
+                      if (fromDate && !toDate) {
+                        setToDate(fromDate);
+                      }
+                      setSelectingFrom(true);
+                    }}
+                    className="bg-blue-500 text-white px-2 py-0.5 rounded hover:bg-blue-600"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-600 text-[14px]">{error}</p>
+          </div>
+        )}
+
+        {/* Data Cards */}
+     <div className="mt-4 space-y-4">
+  {filteredData.length > 0 ? (
+    filteredData.map((item, index) => (
+      <div
+        key={`${item.rawDate.getTime()}-${index}`}
+        className="bg-white shadow-[0px_0px_10px_0px_#E3EBFC] rounded-lg p-4 border border-[#EAEFF4]"
+      >
+        <div className="flex justify-between items-start mb-2">
+          <p className="text-base robotomedium text-[#334155]">{item.date}</p>
+          <p className="text-lg robotosemibold text-[#2AAC5A]">{item.amount}</p>
+        </div>
+
+        <p className="text-sm  border-b  border-[#EAEFF4]  pb-1.5 robotomedium text-[#67778E99] mb-3">
+          {item.calls > 0 ? `${item.calls} Call${item.calls > 1 ? 's' : ''}` : '0 Calls'}
+        </p>
+
+        {/* REMS, RPM, PR1 side by side */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-[12px]   robotomedium">
+            <p className="text-gray-500 ">REMS</p>
+            <p className="text-[#334155]  ">
+              {item.rems > 0 ? Number(item.rems).toLocaleString("en-US") : "-"}
+            </p>
+          </div>
+          <div className="flex justify-between text-[12px]   robotomedium">
+            <p className="text-gray-500 font-medium">RPM</p>
+            <p className="text-[#334155] font-medium">
+              {item.rpm > 0 ? Number(item.rpm).toLocaleString("en-US") : "-"}
+            </p>
+          </div>
+          <div className="flex justify-between text-[12px]   robotomedium">
+            <p className="text-gray-500 ">PR1</p>
+            <p className="text-[#334155] ">
+              {item.pr1 > 0 ? Number(item.pr1).toLocaleString("en-US") : "-"}
+            </p>
+          </div>
+        </div>
+      </div>
+    ))
+  ) : (
+    <div className="text-[14px] text-[#334155] py-8 text-center">
+      {error
+        ? "Unable to load data. Please try again."
+        : "No earnings data available for the selected date range."}
+    </div>
+  )}
+</div>
+
+
+
+
+        {/* Totals Section - Mobile */}
+        {filteredData.length > 0 && (
+          <div className="mt-6 bg-[#FFFFFF] shadow-[0px_0px_10px_0px_#E3EBFC] p-4 border-t border-[#E2E8F0] rounded-[8px]">
+            <div className="space-y-3 text-[14px] font-semibold text-[#1E293B]">
+              <div className="flex justify-between">
+                <p className="text-[#5C5C5C]">Total Calls:</p>
+                <p>{totals.totalCalls > 0 ? totals.totalCalls : "-"}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-[#5C5C5C]">Total REMS:</p>
+                <p>{totals.totalRems > 0 ? totals.totalRems.toLocaleString("en-US") : "-"}</p>
+              </div>
+              <div className="flex justify-between">
+                <p className="text-[#5C5C5C]">Total RPM:</p>
+                <p>{totals.totalRpm > 0 ? totals.totalRpm.toLocaleString("en-US") : "-"}</p>
+              </div>
+              <div className="flex justify-between ">
+                <p className="text-[#5C5C5C]">Total PR1:</p>
+                <p>{totals.totalPr1 > 0 ? totals.totalPr1.toLocaleString("en-US") : "-"}</p>
+              </div>
+              <div className="flex justify-between  ">
+                <p>Total HST:</p>
+                <p>
+                  {totals.totalHst > 0
+                    ? `$${Number(totals.totalHst).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                    : "-"}
+                </p>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-[#E2E8F0] font-bold text-[#333333]">
+                <p>Total Earnings:</p>
+                <p className="text-[#2AAC5A]">
+                  {totals.totalEarnings > 0
+                    ? `$${Number(totals.totalEarnings).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}`
+                    : "-"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop Layout (kept exact, with minor fixes for borders and padding)
   return (
     <div className="bg-white rounded-[8px] p-5" style={{ boxShadow: "0px 0px 16px #E3EBFC" }}>
       {/* Header */}
@@ -529,11 +865,11 @@ const Earninghistory = () => {
         )}
       </div>
 
-      {/* Totals Section */}
+      {/* Totals Section - Desktop */}
       {filteredData.length > 0 && (
-        <div className="mt-4 pt-4 border-t flex border-[#E2E8F0]">
-          <div className="w-1/2 p-4 border-r botder-[#333333]">
-            <div className="flex justify-between text-[14px] font-semibold text-[#1E293B] border-b border-[#333333] pb-16">
+        <div className="mt-4 pt-4 border-t border-[#E2E8F0] flex">
+          <div className="w-1/2 p-4 border-r border-[#E2E8F0]">
+            <div className="flex justify-between text-[14px] font-semibold text-[#1E293B] border-b border-[#E2E8F0] pb-2">
               <p className="text-[15px]">Total Calls: </p>
               <p className="text-[15px]">
                 <span>{totals.totalCalls === 0 ? "-" : totals.totalCalls}</span>
@@ -577,37 +913,28 @@ const Earninghistory = () => {
             <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B]">
               <p>Total REMS:</p>
               <p>
-                {totals.totalRemsSubtotal === 0
+                {totals.totalRems === 0
                   ? "-"
-                  : Number(totals.totalRemsSubtotal).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  : Number(totals.totalRems).toLocaleString("en-US")}
               </p>
             </div>
             <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B] mt-1">
               <p>Total RPM:</p>
               <p>
-                {totals.totalRpmSubtotal === 0
+                {totals.totalRpm === 0
                   ? "-"
-                  : Number(totals.totalRpmSubtotal).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  : Number(totals.totalRpm).toLocaleString("en-US")}
               </p>
             </div>
             <div className="flex justify-between items-center text-[14px] font-semibold text-[#1E293B] mt-1">
               <p>Total PR1:</p>
               <p>
-                {totals.totalPr1Subtotal === 0
+                {totals.totalPr1 === 0
                   ? "-"
-                  : Number(totals.totalPr1Subtotal).toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  : Number(totals.totalPr1).toLocaleString("en-US")}
               </p>
             </div>
-            <div className="border-t border-[#333333] mt-4 pt-3">
+            <div className="border-t border-[#E2E8F0] mt-4 pt-3">
               <div className="flex justify-between">
                 <p className="text-[15px] font-semibold text-[#1E293B]">Subtotal:</p>
                 <p className="text-[15px] font-semibold text-[#1E293B]">

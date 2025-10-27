@@ -12,6 +12,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 const CallByClientsChart = () => {
   const containerRef = useRef(null);
   const [width, setWidth] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const [chartData, setChartData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -80,12 +81,20 @@ const CallByClientsChart = () => {
     fetchData();
   }, []);
 
-  // Set chart width
+  // Set chart width and handle resize
   useEffect(() => {
-    if (containerRef.current) {
-      const parentWidth = containerRef.current.parentElement.offsetWidth || 1000;
-      setWidth(parentWidth * 0.49);
-    }
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 1024;
+      setIsMobile(mobile);
+      if (containerRef.current) {
+        const parentWidth = containerRef.current.parentElement.offsetWidth || 1000;
+        setWidth(parentWidth * (mobile ? 1 : 0.49));
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const options = {
@@ -132,14 +141,16 @@ const CallByClientsChart = () => {
   };
 
   return (
-    <div
+    <>            <div
       ref={containerRef}
-      className="bg-white rounded-md shadow p-4 pe-[100px]"
-      style={{ width, height: 600 }}
+      className={`bg-white rounded-md shadow flex flex-col items-center justify-center relative  ${isMobile ? 'p-4' : ''}`}
+      style={{ width, height:isMobile? 400 : 600 }}
     >
-      <h2 className="text-lg font-semibold mb-4">Call By Clients</h2>
+  <h2 className="text-lg font-semibold mb-4 absolute top-4 left-4 z-10">
+    Call By Clients
+  </h2>
 
-      <div className="relative" style={{ height: '500px' }}>
+      <div className="relative flex items-center justify-center w-full h-full" style={{ height: '0px' }}>
         {loading ? (
           <p className="text-center text-gray-500">Loading...</p>
         ) : error ? (
@@ -160,10 +171,15 @@ const CallByClientsChart = () => {
               </div>
             </div>
           </div>
+
+          
         )}
       </div>
       <ToastContainer position="top-right" autoClose={2000} />
     </div>
+
+    </>
+  
   );
 };
 

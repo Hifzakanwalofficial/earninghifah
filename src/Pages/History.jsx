@@ -12,6 +12,7 @@ const History = () => {
   const [selectingFrom, setSelectingFrom] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date("2025-10-02T00:00:00Z"));
   const [selectedYear, setSelectedYear] = useState(new Date("2025-10-02T00:00:00Z").getUTCFullYear());
+  const [isMobile, setIsMobile] = useState(false);
   const datePickerRef = useRef(null);
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
@@ -21,6 +22,14 @@ const History = () => {
   const [selectedClientRecord, setSelectedClientRecord] = useState(null);
   const [selectedServiceName, setSelectedServiceName] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Check for mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Helper function to check if a date is valid
   const isValidDate = (date) => {
@@ -391,7 +400,39 @@ const History = () => {
     return value === "0.00" ? "-" : value;
   };
 
+  // Mobile Shimmer
+  const MobileShimmer = () => (
+    <div className="space-y-4 p-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="w-32 h-6 bg-gray-200 rounded animate-pulse"></div>
+        <div className="w-48 h-10 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+      {[...Array(3)].map((_, index) => (
+        <div key={index} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 animate-pulse">
+          <div className="flex justify-between items-center mb-2">
+            <div className="w-24 h-4 bg-gray-200 rounded"></div>
+            <div className="w-20 h-5 bg-gray-200 rounded"></div>
+          </div>
+          <div className="space-y-2 mb-3">
+            <div className="flex justify-between">
+              <div className="w-16 h-3 bg-gray-200 rounded"></div>
+              <div className="w-12 h-3 bg-gray-200 rounded"></div>
+            </div>
+            <div className="flex justify-between items-center">
+              <div className="w-20 h-3 bg-gray-200 rounded"></div>
+              <div className="w-8 h-3 bg-gray-200 rounded ml-auto"></div>
+              <div className="w-8 h-3 bg-gray-200 rounded ml-2"></div>
+              <div className="w-8 h-3 bg-gray-200 rounded ml-2"></div>
+            </div>
+          </div>
+          <div className="w-24 h-3 bg-gray-200 rounded"></div>
+        </div>
+      ))}
+    </div>
+  );
+
   if (loading) {
+    if (isMobile) return <MobileShimmer />;
     return (
       <div className="border border-[#F7F7F7] p-4 animate-pulse">
         <div className="flex justify-between items-center px-4 py-2 bg-white">
@@ -439,10 +480,530 @@ const History = () => {
     );
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="border border-[#F7F7F7] p-4 bg-white">
+        {selectedRecords.length > 0 && (
+          <div className="flex gap-3 p-3 bg-gray-100 border-b border-[#F7F7F7] justify-end mb-4 rounded">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm"
+            >
+              Delete
+            </button>
+            <button
+              onClick={handleCancelSelection}
+              className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+      {/* Header */}
+            <div className="flex flex-col justify-between items-start mb-4 w-full">
+              <h2 className="text-[18px] font-semibold text-[#1E293B] mb-2">
+                Call History
+              </h2>
+
+              {/* Date Range Picker */}
+              <div className="relative w-full" ref={datePickerRef}>
+                <div
+                  onClick={() => setShowDatePicker((prev) => !prev)}
+                  className="flex items-center justify-between border border-gray-300 rounded px-4 py-2.5  cursor-pointer hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-full"
+                >
+                  <div className="flex items-center space-x-2">
+                    <svg
+                      className="w-4 h-4 text-gray-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+
+                    <span
+                      className={`truncate text-[14px] ${
+                        !fromDate && !toDate ? "text-gray-400" : "text-gray-700"
+                      }`}
+                    >
+                      {getDateRangeText()}
+                    </span>
+                  </div>
+
+                  {(fromDate || toDate) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearDates();
+                      }}
+                      className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {/* Dropdown Calendar */}
+                {showDatePicker && (
+                  <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-3 w-72">
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <button
+                          onClick={handlePreviousMonth}
+                          className="text-gray-500 hover:text-gray-700 p-1"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 19l-7-7 7-7"
+                            />
+                          </svg>
+                        </button>
+
+                        <div className="flex items-center space-x-1">
+                          <span className="text-xs font-medium text-gray-700">
+                            {currentDate.toLocaleString("en-US", { month: "long" })}
+                          </span>
+                          <select
+                            value={selectedYear}
+                            onChange={handleYearChange}
+                            className="text-xs font-medium text-gray-700 border rounded px-1 py-0.5"
+                          >
+                            {generateYearOptions().map((year) => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <button
+                          onClick={handleNextMonth}
+                          className="text-gray-500 hover:text-gray-700 p-1"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <p className="text-xs font-medium text-gray-700 mb-1">
+                        {selectingFrom ? "Select Start Date" : "Select End Date"}
+                      </p>
+
+                      <div className="flex flex-col space-y-1 text-xs">
+                        <span
+                          className={`px-2 py-0.5 rounded ${
+                            fromDate
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          From: {fromDate ? formatDate(fromDate) : "Not selected"}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded ${
+                            toDate
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          To: {toDate ? formatDate(toDate) : "Not selected"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Calendar */}
+                    <div className="grid grid-cols-7 gap-0.5 mb-2">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                        <div
+                          key={day}
+                          className="text-center text-xs font-medium text-gray-500 py-1"
+                        >
+                          {day}
+                        </div>
+                      ))}
+                      {generateCalendarDays().map((date, index) => {
+                        const isCurrentMonth =
+                          date.getUTCMonth() === currentDate.getUTCMonth();
+                        const isToday =
+                          date.toISOString().split("T")[0] ===
+                          new Date("2025-10-02T00:00:00Z")
+                            .toISOString()
+                            .split("T")[0];
+                        const isSelected = isDateSelected(date);
+                        const isInRange = isDateInRange(date);
+                        const dateStr = date.toISOString().split("T")[0];
+
+                        return (
+                          <button
+                            key={index}
+                            onClick={() => handleDateSelect(dateStr)}
+                            className={`
+                              text-xs py-1 hover:bg-blue-50 rounded transition-colors
+                              ${!isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                              ${isToday ? "font-bold text-blue-600" : ""}
+                              ${isSelected ? "bg-blue-500 text-white hover:bg-blue-600" : ""}
+                              ${
+                                isInRange && !isSelected
+                                  ? "bg-blue-100 text-blue-700"
+                                  : ""
+                              }
+                            `}
+                          >
+                            {date.getUTCDate()}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1.5 border-t text-xs">
+                      <button
+                        onClick={clearDates}
+                        className="text-gray-500 hover:text-gray-700 px-1"
+                      >
+                        Clear
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDatePicker(false);
+                          if (fromDate && !toDate) {
+                            setToDate(fromDate);
+                          }
+                          setSelectingFrom(true);
+                        }}
+                        className="bg-blue-500 text-white px-2 py-0.5 rounded hover:bg-blue-600"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+
+
+        {/* Search Bar Mobile */}
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search by Client Name or Call ID"
+              className="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                }}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Data Cards */}
+        <div className="space-y-4">
+          {history.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No Call History
+            </div>
+          ) : (
+            history.map((record, idx) => {
+              const serviceName = record.services.length > 0 ? record.services[0]?.name || "-" : "-";
+              return (
+               <div
+  key={idx}
+  className="bg-white  rounded-lg p-4 border border-[#EAEFF4] shadow-[0px_0px_10px_0px_#E3EBFC]"
+>
+  {/* Client Name and Total */}
+  <div className="flex justify-between items-center mb-3">
+    <div className="flex flex-col">
+
+        <p className="text-[#67778E99] text-[12px] robotomedium ">Client Name</p>
+    <p className="text-[14px] text-[#333333]  robotomedium">
+      {record.clientName || "----"}
+    </p>
+
+    </div>
+
+    <div className="flex flex-col items-end">
+
+      <p className="text-[12px] robotomedium  text-[#67778E99]">Total</p>
+
+       <p
+      onClick={() => handleTotalClick(record)}
+      className="text-[14px] robotobold  text-[#2AAC5A] cursor-pointer hover:underline"
+    >
+      ${formatValue(record.total)}
+    </p>
+
+    </div>
+  
+   
+  </div>
+
+  {/* Divider */}
+  <hr className="border-[#EAEFF4] mb-3" />
+
+  {/* Details Section - Two column style */}
+  <div className="space-y-2 text-sm">
+    {/* Call No */}
+    <div className="flex justify-between">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">Call No</span>
+      <span className="text-[#334155] robotomedium text-[14px]">{record.call}</span>
+    </div>
+
+    {/* Service */}
+    <div className="flex justify-between">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">Service</span>
+      <span
+        className="text-[#0078BD] robotomedium text-[14px]  cursor-pointer hover:underline"
+        onClick={() => handleServiceClick(record, serviceName)}
+      >
+        {serviceName}
+      </span>
+    </div>
+
+    {/* REMS */}
+    <div className="flex justify-between">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">REMS</span>
+      <span
+        className="text-[#334155] robotomedium text-[14px] cursor-pointer hover:text-blue-600"
+        onClick={() => handleServiceClick(record, "REMS:KMS ENROUTE")}
+      >
+        {formatValue(record.rem)}
+      </span>
+    </div>
+
+    {/* RPM */}
+    <div className="flex justify-between">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">RPM</span>
+      <span
+        className="text-[#334155] robotomedium text-[14px] cursor-pointer hover:text-blue-600"
+        onClick={() => handleServiceClick(record, "RPM:KMS UNDER TOW")}
+      >
+        {formatValue(record.rpm)}
+      </span>
+    </div>
+
+    {/* PR1 */}
+    <div className="flex justify-between">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">PR1</span>
+      <span
+        className="text-[#334155] robotomedium text-[14px] cursor-pointer hover:text-blue-600"
+        onClick={() => handleServiceClick(record, "PR1:WAITING TIME")}
+      >
+        {formatValue(record.pr1)}
+      </span>
+    </div>
+
+    {/* Date */}
+    <div className="flex justify-between ">
+      <span className="text-[#5C5C5C] text-[14px] robotomedium">Date</span>
+      <span className="text-[#334155] robotomedium text-[14px]">
+        {formatDate(record.date)}
+      </span>
+    </div>
+  </div>
+</div>
+
+              );
+            })
+          )}
+        </div>
+
+
+        {/* Client Details Modal Mobile */}
+        {showClientModal && selectedClientRecord && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm  bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 border-b border-[#EAEFF4] border">
+                <h2 className="text-lg font-semibold text-gray-800">Call Details</h2>
+                <button
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setSelectedServiceName(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600 block mb-2">
+                    Service Details
+                  </label>
+                  {(() => {
+                    const filteredServices = selectedServiceName
+                      ? selectedClientRecord.servicesUsed.filter((service) =>
+                          service.name?.trim().toUpperCase() === selectedServiceName?.toUpperCase()
+                        )
+                      : [...selectedClientRecord.servicesUsed].sort((a, b) =>
+                          a.name.localeCompare(b.name)
+                        );
+                    if (filteredServices.length > 0) {
+                      return (
+                        <>
+                          {filteredServices.map((service, index) => (
+                            <div key={index} className="bg-gray-50 p-4 rounded-lg mb-3">
+                              <p className="text-base font-medium text-gray-700 mb-2">
+                                {service.name}
+                              </p>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Unit Quantity</span>
+                                  <span className="text-gray-900">
+                                    {formatValue(Number(service.unitQuantity || 0).toFixed(2))}{" "}
+                                    {service.unitType || "unit"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Base Rate</span>
+                                  <span className="text-gray-900">${formatValue(Number(service.baseRate || 0).toFixed(2))}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">HST</span>
+                                  <span className="text-gray-900">${formatValue(Number(service.hst || 0).toFixed(2))}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-600">Total</span>
+                                  <span className="text-[#0078bd] font-medium">${formatValue(Number(service.total || 0).toFixed(2))}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {!selectedServiceName && (
+                            <div className="flex justify-between items-center px-2 pt-2 border-t border-[#EAEFF4] border">
+                              <label className="text-base font-medium text-gray-600">
+                                Grand Total
+                              </label>
+                              <p className="text-base font-semibold text-[#0078bd]">
+                                ${formatValue(Number(selectedClientRecord.total || 0).toFixed(2))}
+                              </p>
+                            </div>
+                          )}
+                        </>
+                      );
+                    } else {
+                      return (
+                        <p className="text-sm text-gray-500 text-center">
+                          {selectedServiceName ? "Service Not Used" : "No service details available"}
+                        </p>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+
+              <div className="flex justify-end p-4 border-t border-[#EAEFF4] border">
+                <button
+                  onClick={() => {
+                    setShowClientModal(false);
+                    setSelectedServiceName(null);
+                  }}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal Mobile */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg p-6 shadow-lg w-full max-w-sm">
+              <h2 className="text-lg font-semibold mb-4">Confirm Delete</h2>
+              <p className="mb-6 text-sm">
+                Are you sure you want to delete{" "}
+                <span className="font-bold">{selectedRecords.length}</span> record(s)?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteLoading}
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 text-sm"
+                >
+                  {deleteLoading ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="border border-[#F7F7F7] p-6">
       {selectedRecords.length > 0 && (
-        <div className="flex gap-3 p-3 bg-gray-100 border-b justify-end">
+        <div className="flex gap-3 p-3 bg-gray-100 border-b border-[#F7F7F7] justify-end">
           <button
             onClick={() => setShowDeleteModal(true)}
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -458,7 +1019,7 @@ const History = () => {
         </div>
       )}
 
-      <div className="flex justify-between items-center px-4 py-2 bg-white">
+      <div className="flex  flex-col lg:flex-row justify-between items-center px-4 py-2 bg-white">
         <h2 className="robotomedium text-[20px]">Call History</h2>
         <div className="flex items-center gap-4">
           {/* Search Bar */}
@@ -652,6 +1213,12 @@ const History = () => {
             )}
           </div>
         </div>
+
+
+
+
+
+
       </div>
 
       <div className="overflow-x-auto">
@@ -748,7 +1315,7 @@ const History = () => {
         </table>
       </div>
 
-      {/* Client Details Modal */}
+      {/* Client Details Modal Desktop */}
       {showClientModal && selectedClientRecord && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
           <div className="bg-white rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
@@ -864,7 +1431,7 @@ const History = () => {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal Desktop */}
       {showDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50">
           <div className="bg-white rounded-lg p-6 shadow-lg w-[400px]">

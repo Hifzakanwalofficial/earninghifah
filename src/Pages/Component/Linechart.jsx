@@ -9,23 +9,31 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { RiDragMove2Fill } from "react-icons/ri";
-import { Resizable } from "react-resizable"; // Import Resizable component
 import { Baseurl } from "../../Config";
 
 const Linechart = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [size, setSize] = useState({ width: 0, height: 600 }); // Initial width will be set in useEffect
-  const containerRef = useRef(null); // Ref to get parent container width
+  const [size, setSize] = useState({ width: 0, height: 600 });
+  const [isMobile, setIsMobile] = useState(false);
+  const containerRef = useRef(null);
 
-  // Calculate initial width (60% of parent) on mount
+  // Calculate initial width and handle resize
   useEffect(() => {
-    if (containerRef.current) {
-      const parentWidth = containerRef.current.parentElement.offsetWidth || 1000; // Fallback to 1000px if no parent width
-      setSize({ width: parentWidth * 0.49, height: 600 }); // 60% of parent width
-    }
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 1024;
+      setIsMobile(mobile);
+      if (containerRef.current) {
+        const parentWidth = containerRef.current.parentElement.offsetWidth || 1000;
+        const newWidth = mobile ? parentWidth : parentWidth * 0.49;
+        setSize({ width: newWidth, height: mobile ? 400 : 600 });
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
@@ -56,8 +64,8 @@ const Linechart = () => {
         const result = await response.json();
         console.log("API Response:", result); // Debug log
 
-        // Filter data to include only dates up to today (Sep 25, 2025, PKT)
-        const today = new Date(); // Current date
+        // Filter data to include only dates up to today (Oct 27, 2025)
+        const today = new Date();
         const chartData = result.progress
           .filter((item) => new Date(item.date) <= today)
           .map((item) => {
@@ -108,7 +116,7 @@ const Linechart = () => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white border border-gray-300 p-3 rounded shadow">
-          <p className="text-gray-700 font-semibold">{label}</p>
+          <p className="text-gray-700 text-[14px] font-semibold">{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.stroke }}>
               {entry.name}:{" "}
@@ -122,19 +130,6 @@ const Linechart = () => {
     }
     return null;
   };
-
-  // Handle resize event
-  const onResize = (event, { size }) => {
-    setSize({ width: size.width, height: size.height });
-  };
-
-  // Custom resize handle with Tailwind CSS
-  const resizeHandle = (
-    <span
-      className="absolute bottom-0 right-0 w-4 h-4 bg-[#0000004f] rounded-sm cursor-se-resize  transition-colors"
-      style={{ zIndex: 10 }}
-    ><RiDragMove2Fill /></span>
-  );
 
   if (loading) {
     return (
@@ -161,77 +156,78 @@ const Linechart = () => {
   }
 
   return (
-    // <Resizable
-    //   width={size.width}
-    //   height={size.height}
-    //   onResize={onResize}
-    //   minConstraints={[300, 300]}
-    //   maxConstraints={[1500, 800]} 
-    //   handle={resizeHandle} 
-    // >
-      <div
-        ref={containerRef}
-        className="bg-white p-4 rounded-xl w-full shadow outline-none focus:outline-none relative"
-        style={{ width: size.width, height: size.height }}
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
+    <div
+      ref={containerRef}
+      className="bg-white p-4 rounded-xl shadow outline-none focus:outline-none relative"
+      style={{ width: size.width, height: size.height }}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{ top: 20, right: 30, left: -20, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend
+            wrapperStyle={{
+              fontSize: 14,
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: "10px",
+              textAlign: "center",
+              marginTop: "15px",
+            }}
+          />
 
-            {/* Total Calls */}
-            <Line
-              type="monotone"
-              dataKey="totalCalls"
-              name="Total Calls"
-              stroke="#2563EB"
-              strokeWidth={2}
-              dot={{ r: 4, stroke: "#2563EB", strokeWidth: 2, fill: "white" }}
-              activeDot={{ r: 6 }}
-            />
+          {/* Total Calls */}
+          <Line
+            type="monotone"
+            dataKey="totalCalls"
+            name="Total Calls"
+            stroke="#2563EB"
+            strokeWidth={2}
+            dot={{ r: 4, stroke: "#2563EB", strokeWidth: 2, fill: "white" }}
+            activeDot={{ r: 6 }}
+          />
 
-            {/* REMS:KMS ENROUTE Earnings */}
-            <Line
-              type="monotone"
-              dataKey="rems"
-              name="REMS Earnings"
-              stroke="#16A34A"
-              strokeWidth={2}
-              dot={{ r: 4, stroke: "#16A34A", strokeWidth: 2, fill: "white" }}
-              activeDot={{ r: 6 }}
-            />
+          {/* REMS:KMS ENROUTE Earnings */}
+          <Line
+            type="monotone"
+            dataKey="rems"
+            name="REMS Earnings"
+            stroke="#16A34A"
+            strokeWidth={2}
+            dot={{ r: 4, stroke: "#16A34A", strokeWidth: 2, fill: "white" }}
+            activeDot={{ r: 6 }}
+          />
 
-            {/* RPM:KMS UNDER TOW Earnings */}
-            <Line
-              type="monotone"
-              dataKey="rpm"
-              name="RPM Earnings"
-              stroke="#9333EA"
-              strokeWidth={2}
-              dot={{ r: 4, stroke: "#9333EA", strokeWidth: 2, fill: "white" }}
-              activeDot={{ r: 6 }}
-            />
+          {/* RPM:KMS UNDER TOW Earnings */}
+          <Line
+            type="monotone"
+            dataKey="rpm"
+            name="RPM Earnings"
+            stroke="#9333EA"
+            strokeWidth={2}
+            dot={{ r: 4, stroke: "#9333EA", strokeWidth: 2, fill: "white" }}
+            activeDot={{ r: 6 }}
+          />
 
-            {/* PR1:WAITING TIME Earnings */}
-            <Line
-              type="monotone"
-              dataKey="pr1"
-              name="PR1 Earnings"
-              stroke="#DC2626"
-              strokeWidth={2}
-              dot={{ r: 4, stroke: "#DC2626", strokeWidth: 2, fill: "white" }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    // </Resizable> 
+          {/* PR1:WAITING TIME Earnings */}
+          <Line
+            type="monotone"
+            dataKey="pr1"
+            name="PR1 Earnings"
+            stroke="#DC2626"
+            strokeWidth={2}
+            dot={{ r: 4, stroke: "#DC2626", strokeWidth: 2, fill: "white" }}
+            activeDot={{ r: 6 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
 

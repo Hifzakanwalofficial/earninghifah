@@ -109,15 +109,15 @@ const Dashboard = () => {
       </div>
 
       {/* Two Cards - Stack on mobile, side by side on desktop */}
-      <div className="flex flex-col md:flex-row gap-4 mb-[32px]">
+      <div className="flex flex-col lg:flex-row gap-4 mb-[32px]">
         {/* Today's Earnings Card */}
         <div
-          className="w-full md:w-1/2 bg-[#0078BD] px-[14px] py-[12px] rounded-[8px]"
+          className="w-full lg:w-1/2 bg-[#0078BD] px-[14px] py-[12px] rounded-[8px]"
           style={{ boxShadow: '0px 0px 16px #E3EBFC' }}
         >
-          <div className="flex items-center justify-between mt-2 px-[10px] md:px-[14px] py-[15px] md:py-[20px]">
-            <p className="text-[#ffffff] text-[16px] md:text-[30px] robotomedium">Today's Earnings</p>
-            <p className="text-[#ffffff] robotobold text-[20px] md:text-[32px]">
+          <div className="flex items-center justify-between mt-2 px-[10px] md:px-[14px] py-[10px] md:py-[20px]">
+            <p className="text-[#ffffff] text-[14px] md:text-[30px] robotomedium">Today's Earnings</p>
+            <p className="text-[#ffffff] robotobold text-[16px] md:text-[32px]">
               ${todayEarning.toFixed(2)}
             </p>
           </div>
@@ -125,13 +125,13 @@ const Dashboard = () => {
         
         {/* Total Earnings Card */}
         <div
-          className="w-full md:w-1/2 bg-[#ffffff] px-[14px] py-[10px] rounded-[8px] flex items-center justify-between"
+          className="w-full lg:w-1/2 bg-[#ffffff] px-[14px] py-[10px] rounded-[8px] flex items-center justify-between"
           style={{ boxShadow: '0px 0px 16px #E3EBFC' }}
         >
-          <div className="px-[10px] md:px-[14px] py-[15px] md:py-[20px]">
-            <p className="text-[#0078BD] robotomedium text-[16px] md:text-[30px]">Total Earnings</p>
+          <div className="px-[10px] md:px-[14px] py-[10px] md:py-[20px]">
+            <p className="text-[#0078BD] robotomedium text-[14px] md:text-[30px]">Total Earnings</p>
           </div>
-          <div className="robotobold text-[black] text-[20px] md:text-[32px] px-[10px]">
+          <div className="robotobold text-[black] text-[16px] md:text-[32px] px-[10px]">
             ${totalEarnings.toFixed(2)}
           </div>
         </div>
@@ -144,6 +144,7 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
+   
   );
 };
 

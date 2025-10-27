@@ -230,9 +230,9 @@ const Form = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div
-        className="bg-white rounded-[8px] p-3 sm:p-6 md:p-8 lg:p-[62px] w-[100%] mx-auto mt-10"
+        className="bg-white rounded-[8px] p-3 sm:p-6 md:p-8 lg:p-[62px] w-[100%] mx-auto mt-[0] sm:mt-10"
         style={{ boxShadow: "0px 0px 16px #E3EBFC" }}
       >
         <div className="flex justify-between items-center mb-3 sm:mb-6">
@@ -252,7 +252,7 @@ const Form = () => {
             <select
               value={selectedClientId}
               onChange={handleClientChange}
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] bg-[#F8FAFC]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
               required
             >
@@ -272,7 +272,7 @@ const Form = () => {
               value={callNumber}
               onChange={(e) => setCallNumber(e.target.value)}
               placeholder="Enter call number"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting}
               required
             />
@@ -288,7 +288,7 @@ const Form = () => {
               onChange={(e) => setDate(e.target.value)}
               onClick={(e) => e.target.showPicker()}
               placeholder="Select a date"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] appearance-none cursor-pointer"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] appearance-none cursor-pointer"
               disabled={isSubmitting}
               required
             />
@@ -301,7 +301,7 @@ const Form = () => {
             <select
               value=""
               onChange={handleServiceChange}
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] bg-[#F8FAFC]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B] "
               disabled={isSubmitting || !selectedClientId}
             >
               <option value="">Select a Service</option>
@@ -349,7 +349,7 @@ const Form = () => {
               onChange={(e) => setRems(e.target.value)}
               placeholder="Enter Kms Enroute"
               min="0"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting || !selectedClientId}
             />
             {remsCalc.total > 0 && (
@@ -370,7 +370,7 @@ const Form = () => {
               onChange={(e) => setRpm(e.target.value)}
               placeholder="Enter Kms Under Tow"
               min="0"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting || !selectedClientId}
             />
             {rpmCalc.total > 0 && (
@@ -392,7 +392,7 @@ const Form = () => {
               onChange={(e) => setPr1(e.target.value)}
               placeholder="Enter Waiting Time (minutes)"
               min="0"
-              className="w-full border border-[#E2E8F0] rounded-md px-2 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
+              className="w-full border border-[#DADDE2] bg-[#FAFAFC]  rounded-[8px] px-[14px] py-[10px] sm:px-3 sm:py-2 text-[11px] sm:text-[14px] text-[#1E293B] focus:outline-none focus:ring-1 focus:ring-[#00C26B]"
               disabled={isSubmitting || !selectedClientId}
             />
             {pr1Calc.total > 0 && (
@@ -406,22 +406,22 @@ const Form = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end mt-3 sm:mt-6 gap-2 sm:gap-3">
+        <div className="flex flex-row  justify-end mt-3 sm:mt-6 gap-2 sm:gap-3">
           <button 
             onClick={handleReset} 
-            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md border border-[#CBD5E1] text-[#475569] text-[11px] sm:text-[14px] order-2 sm:order-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1.5 sm:px-5 sm:py-2 w-50 rounded-md border bg-[#F6F7F8] robotomedium  border-[#DADDE2] text-[#475569] text-[11px] sm:text-[14px] order-2 sm:order-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
           >
             Reset
           </button>
           <button 
             onClick={handleSubmit} 
-            className="px-3 py-1.5 sm:px-5 sm:py-2 rounded-md bg-[#0077CC] text-white text-[11px] sm:text-[14px] order-1 sm:order-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-[32px] py-[8px] sm:px-5 sm:py-2 w-50 rounded-md bg-[#0078BD]  text-white text-[11px] sm:text-[14px] order-1 sm:order-2 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <>
-                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-white border-t-transparent robotomedium rounded-full animate-spin"></div>
                 Submitting...
               </>
             ) : (
