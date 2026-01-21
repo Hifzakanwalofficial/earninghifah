@@ -1,8 +1,35 @@
+// src/Component/Cards.jsx
 import React, { useState, useEffect } from 'react';
 import { BsArrowUpRight } from 'react-icons/bs';
 import { Baseurl } from '../../Config';
 
-const Cards = () => {
+// === UTILITY: FORMAT DATE AS YYYY-MM-DD (LOCAL TIMEZONE) ===
+const formatToYMD = (date) => {
+  if (!date || isNaN(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+// === DEFAULT CYCLE (LOCAL DATE) ===
+const getDefaultCycle = () => {
+  const today = new Date();
+  const day = today.getDate();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  let start, end;
+  if (day >= 1 && day <= 15) {
+    start = new Date(year, month, 1);
+    end = new Date(year, month, 15);
+  } else {
+    start = new Date(year, month, 16);
+    end = new Date(year, month + 1, 0); // Last day of current month
+  }
+  return { from: formatToYMD(start), to: formatToYMD(end) };
+};
+
+const Cards = ({ fromDate, toDate, loading: parentLoading }) => {
   const [monthlyData, setMonthlyData] = useState({
     currentEarnings: 0,
     previousEarnings: 0,
@@ -17,193 +44,156 @@ const Cards = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   useEffect(() => {
+    const { from, to } = getDefaultCycle();
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const token = localStorage.getItem('authToken');
         if (!token) {
           throw new Error('No authentication token found. Please log in.');
         }
-
-        // Fetch monthly comparison data (for the first card)
-        const monthlyResponse = await fetch(`${Baseurl}/driver/monthly-comparison`, {
+        // === API 1: Monthly Comparison ===
+        const monthlyUrl = new URL(`${Baseurl}/driver/monthly-comparison`);
+        monthlyUrl.searchParams.append('startDate', from);
+        monthlyUrl.searchParams.append('endDate', to);
+        const monthlyResponse = await fetch(monthlyUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
-
         if (!monthlyResponse.ok) {
           const errorData = await monthlyResponse.json();
           throw new Error(errorData.message || 'Failed to fetch monthly comparison');
         }
-
-        const monthlyData = await monthlyResponse.json();
-
-        // Fetch cycle progress data (for the second card and earnings)
-        const cycleResponse = await fetch(`${Baseurl}/driver/cycle-progress`, {
+        const monthlyDataRes = await monthlyResponse.json();
+        // === API 2: Cycle Progress ===
+        const cycleUrl = new URL(`${Baseurl}/driver/cycle-progress`);
+        cycleUrl.searchParams.append('startDate', from);
+        cycleUrl.searchParams.append('endDate', to);
+        const cycleResponse = await fetch(cycleUrl, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
-
         if (!cycleResponse.ok) {
           const errorData = await cycleResponse.json();
           throw new Error(errorData.message || 'Failed to fetch cycle progress');
         }
-
-        const cycleData = await cycleResponse.json();
-
+        const cycleDataRes = await cycleResponse.json();
+        // === SET DATA ===
         setMonthlyData({
-          currentEarnings: cycleData.totalEarnings, // Use cycleData.totalEarnings for Total Earnings card
-          previousEarnings: monthlyData.totals.previous.earnings,
-          comparison: monthlyData.totals.comparison.earnings,
-          currentMonthRange: monthlyData.monthRange.current,
-          previousMonthRange: monthlyData.monthRange.previous,
+          percentageEarnings: cycleDataRes.percentageEarnings || 0,
+          currentEarnings: cycleDataRes.totalEarnings,
+          previousEarnings: monthlyDataRes.totals?.previous?.earnings || 0,
+          comparison: monthlyDataRes.totals?.comparison?.earnings || 'N/A',
+          currentMonthRange: monthlyDataRes.monthRange?.current || {},
+          previousMonthRange: monthlyDataRes.monthRange?.previous || {},
         });
-
         setCycleData({
-          totalEarnings: cycleData.totalEarnings,
-          cycleStart: cycleData.cycleStart,
-          cycleEnd: cycleData.cycleEnd,
+          percentageEarnings: cycleDataRes.percentageEarnings || 0,
+          totalEarnings: cycleDataRes.totalEarnings || 0,
+          cycleStart: cycleDataRes.cycleStart || from,
+          cycleEnd: cycleDataRes.cycleEnd || to,
         });
-
         setLoading(false);
       } catch (err) {
-        setError(err.message || 'An error occurred while fetching data');
+        setError(err.message);
         setLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
-  // Calculate days remaining in the cycle
+  // === CALCULATE DAYS REMAINING ===
   const calculateDaysRemaining = () => {
+    if (!cycleData.cycleEnd) return 0;
     const end = new Date(cycleData.cycleEnd);
     const today = new Date();
     const diffTime = end - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays >= 0 ? diffDays : 0;
   };
-
-  // Format date for display
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  };
-
-  // Calculate progress percentage for the cycle
+  // === PROGRESS PERCENTAGE ===
   const progressPercentage = () => {
+    if (!cycleData.cycleStart || !cycleData.cycleEnd) return 0;
     const start = new Date(cycleData.cycleStart);
     const end = new Date(cycleData.cycleEnd);
     const today = new Date();
-
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     const daysPassed = Math.ceil((today - start) / (1000 * 60 * 60 * 24));
-
-    return Math.min((daysPassed / totalDays) * 100, 100).toFixed(0);
+    return totalDays > 0 ? Math.min((daysPassed / totalDays) * 100, 100).toFixed(0) : 0;
   };
-
-  // Get comparison percentage or text for the first card
+  // === COMPARISON TEXT ===
   const getComparisonText = () => {
-    if (monthlyData.comparison === "No previous data") {
+    if (!monthlyData.comparison || monthlyData.comparison === "No previous data") {
       return "No previous data";
     }
     return monthlyData.comparison;
   };
-
-  // Shimmer Animation Component
-  // const ShimmerCard = ({ isLeftCard = false }) => (
-  //   <div className={`w-1/2 px-[14px] py-[22px] rounded-[8px] ${isLeftCard ? 'bg-[#0078BD]' : 'bg-white'}`}
-  //     style={!isLeftCard ? { boxShadow: '0px 0px 16px #E3EBFC' } : {}}
-  //   >
-  //     {isLeftCard ? (
-  //       // Left Card Shimmer
-  //       <div className="flex items-center justify-between">
-  //         <div>
-  //           <div className="w-32 h-5 bg-white/20 rounded animate-pulse mb-3"></div>
-  //           <div className="w-40 h-4 bg-white/20 rounded animate-pulse mb-3"></div>
-  //           <div className="w-28 h-4 bg-white/20 rounded animate-pulse"></div>
-  //         </div>
-  //         <div className="w-20 h-8 bg-white/20 rounded animate-pulse"></div>
-  //       </div>
-  //     ) : (
-  //       // Right Card Shimmer
-  //       <div>
-  //         <div className="w-48 h-4 bg-gray-200 rounded animate-pulse mb-4"></div>
-  //         <div className="flex items-center justify-between mb-3">
-  //           <div className="w-56 h-4 bg-gray-200 rounded animate-pulse"></div>
-  //           <div className="w-16 h-5 bg-gray-200 rounded animate-pulse"></div>
-  //         </div>
-  //         <div className="w-full bg-gray-200 h-[6px] rounded-full mb-2 animate-pulse"></div>
-  //         <div className="w-44 h-4 bg-gray-200 rounded animate-pulse"></div>
-  //       </div>
-  //     )}
-  //   </div>
-  // );
-
-  // if (loading) {
-  //   return (
-  //     <div className="flex gap-4 mb-[32px]">
-  //       <ShimmerCard isLeftCard={true} />
-  //       <ShimmerCard isLeftCard={false} />
-  //     </div>
-  //   );
-  // }
-
-  // if (error) {
-  //   return <div>Error: {error}</div>;
-  // }
-
+  // === FORMAT DATE ===
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+  // === SHOW SHIMMER IF LOADING OR PARENT LOADING ===
+  if (loading || parentLoading) {
+    return (
+      <div className="flex gap-4 mb-[32px]">
+        {/* Shimmer for Cycle Earnings Card */}
+        <div className="w-full lg:w-1/2 bg-white dark:bg-[#080F25] p-4 rounded-lg animate-pulse">
+          <div className="h-5 bg-gray-300 dark:bg-[#080F25] rounded w-3/4 mb-2"></div>
+          <div className="h-8 bg-gray-300 dark:bg-[#080F25] rounded w-1/2 mb-4"></div>
+          <div className="h-2 bg-gray-300 dark:bg-[#080F25] rounded-full w-full mb-2"></div>
+          <div className="h-4 bg-gray-300 dark:bg-[#080F25] rounded w-1/3"></div>
+        </div>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="text-red-600 text-sm p-4 bg-red-50 rounded-lg mb-4">
+        Error: {error}
+      </div>
+    );
+  }
   return (
     <div className="flex gap-4 mb-[32px]">
-      {/* Left Card (Total Earnings) */}
-      {/* <div className="w-1/2 bg-[#0078BD] px-[14px] py-[22px] rounded-[8px] flex items-center justify-between">
-        <div>
-          <p className="text-white robotomedium text-[20px]">Total Earnings</p>
-          <p className="text-white robotomedium text-[14px] my-[14px]">
-            As of {formatDate(cycleData.cycleStart)} - {formatDate(cycleData.cycleEnd)}
-          </p>
-          <p className="text-[#ffffff] text-[14px] robotomedium flex gap-2">
-            <BsArrowUpRight /> {getComparisonText()}
-          </p>
-        </div>
-        <div className="robotobold text-white text-[32px]">${cycleData.totalEarnings.toFixed(2)}</div>
-      </div> */}
-
-      {/* Right Card (Cycle Earnings Summary) */}
-      <div
-        className=" w-full lg:w-1/2 bg-white px-[14px] py-[22px] rounded-[8px]"
-        style={{ boxShadow: '0px 0px 16px #E3EBFC' }}
-      >
-        <p className="text-[#1E293B] text-[14px] robotomedium">Cycle Earnings Summary</p>
-
+      {/* === CYCLE EARNINGS SUMMARY CARD === */}
+     <div
+  className="w-full lg:w-1/2 bg-white px-[14px] py-[22px] rounded-[8px] shadow-md dark:bg-[#101935] dark:border dark:border-[#263463] dark:shadow-none"
+>
+        <p className="text-[#1E293B] text-[14px] dark:text-[#95A0C6] robotomedium">Cycle Earnings Summary</p>
         <div className="flex items-center justify-between mt-2">
-          <p className="text-[#475569] text-[14px] robotomedium">
+          <p className="text-[#475569] text-[14px] dark:text-[#95A0C6] robotomedium">
             Earnings for the current cycle
           </p>
-          <p className="text-[#0078BD] robotobold text-[20px]">${cycleData.totalEarnings.toFixed(2)}</p>
+          <p className="text-[#0078BD] robotobold text-[20px] dark:text-white">
+            {/* ${cycleData.totalEarnings.toFixed(2)} */}
+             ${cycleData.percentageEarnings.toFixed(2)}
+          </p>
         </div>
-
-        {/* Progress bar */}
+        {/* Progress Bar */}
         <div className="w-full bg-[#E2E8F0] h-[6px] rounded-full mt-3">
           <div
-            className="bg-[#0078BD] h-[6px] rounded-full"
+            className="bg-[#0078BD] h-[6px] rounded-full transition-all duration-500"
             style={{ width: `${progressPercentage()}%` }}
           ></div>
         </div>
-
-        <p className="text-[#475569] text-[14px] robotomedium mt-2">
+        <p className="text-[#475569] dark:text-[#95A0C6] text-[14px] robotomedium mt-2">
           {calculateDaysRemaining()} Days remaining in Cycle
+        </p>
+        {/* Optional: Show date range */}
+        <p className="text-xs text-gray-500 dark:text-[#95A0C6] mt-1">
+          {formatDate(cycleData.cycleStart)} – {formatDate(cycleData.cycleEnd)}
         </p>
       </div>
     </div>
   );
 };
-
 export default Cards;

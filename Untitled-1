@@ -1,0 +1,325 @@
+import React, { useState, useEffect } from "react";
+import { FaChevronDown, FaArrowUp, FaArrowDown } from "react-icons/fa";
+import { Baseurl } from "../Config";
+
+
+const EditCallModal = ({ call, filteredCalls, currentEditIndex, onPrev, onNext, handleUpdateStatus, isOpen, onClose, onUpdate }) => {
+  const [formData, setFormData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
+
+  const capitalizeFirstLetter = (s) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
+
+  // Initialize form data from call
+  useEffect(() => {
+    if (call && isOpen) {
+      const initialServices = call.servicesUsed.map(s => ({
+        _id: s._id,
+        name: s.name,
+        type: s.type || (s.baseRate && s.inputUnits ? "fixed" : "distance"),
+        baseRate: Number(s.baseRate || 0).toFixed(2),
+        inputUnits: Number(s.inputUnits || s.unitQuantity || 0),
+        freeUnits: Number(s.freeUnits || 0),
+        unitType: s.unitType || "unit",
+        unitQuantity: Number(s.unitQuantity || 0).toFixed(2),
+      }));
+
+      setFormData({
+        callId: call._id,
+        phoneNumber: call.call,
+        clientId: call.clientId,
+        date: call.date ? new Date(call.date).toISOString().slice(0, 16) : "",
+        services: initialServices,
+      });
+      setError("");
+    }
+  }, [call, isOpen]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!e.target.closest(".status-dropdown")) setShowStatusDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  if (!isOpen || !call || !formData) return null;
+
+  const formatValue = (v) => (v === "0.00" || !v ? "-" : v);
+
+  const handleInputChange = (e, index) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const services = [...prev.services];
+      services[index] = { ...services[index], [name]: value };
+      return { ...prev, services };
+    });
+  };
+
+  const handleTopLevelChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    setError("");
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setError("Authentication token missing.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const payload = {
+        callId: formData.callId,
+        phoneNumber: formData.phoneNumber,
+        clientId: formData.clientId,
+        date: new Date(formData.date).toISOString(),
+        services: formData.services.map(s => ({
+          _id: s._id,
+          name: s.name,
+          type: s.type,
+          baseRate: parseFloat(s.baseRate) || 0,
+          inputUnits: parseFloat(s.inputUnits) || 0,
+          ...(s.freeUnits ? { freeUnits: parseFloat(s.freeUnits) } : {}),
+          ...(s.unitType ? { unitType: s.unitType } : {}),
+          ...(s.unitQuantity ? { unitQuantity: parseFloat(s.unitQuantity) } : {}),
+        })),
+      };
+
+      console.log("Sending to API:", payload);
+
+      const res = await fetch(`${Baseurl}/admin/editcall`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update call");
+
+      onUpdate(data.call);
+      onClose();
+    } catch (err) {
+      console.error("Edit API Error:", err);
+      setError(err.message || "Error saving changes");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-[#0000005d] bg-opacity-50 z-50 p-4">
+      <div className="bg-white dark:bg-[#101935] rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 border border-[#00000033] dark:border-[#263463]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Edit Call Record</h2>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 rounded">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-6">
+          {/* Basic Info */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Call Number</label>
+              <input
+                type="text"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleTopLevelChange}
+                className="mt-1 block w-full px-3 py-2 border border-[#00000033] dark:border-gray-700 rounded-md focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Client ID</label>
+              <input
+                type="text"
+                value={formData.clientId}
+                readOnly
+                className="mt-1 block w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-[#00000033] dark:border-gray-700 rounded-md text-gray-900 dark:text-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date & Time</label>
+              <input
+                type="datetime-local"
+                name="date"
+                value={formData.date}
+                onChange={handleTopLevelChange}
+                className="mt-1 block w-full px-3 py-2 border border-[#00000033] dark:border-gray-700 rounded-md focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300 dark:[color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
+              <div className="relative status-dropdown mt-1">
+                <span
+                  style={{
+                    color:
+                      call.status.toLowerCase() === "pending" ||
+                      call.status.toLowerCase() === "unverified"
+                        ? "#FFA500"
+                        : "#18CC6C",
+                  }}
+                  className="cursor-pointer flex items-center robotomedium text-sm"
+                  onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                >
+                  {capitalizeFirstLetter(
+                    call.status.toLowerCase() === "pending"
+                      ? "Unverified"
+                      : call.status
+                  )}
+                  <FaChevronDown className="inline-block ml-1 w-3 h-3" />
+                </span>
+                {showStatusDropdown && (
+                  <div className="absolute z-10 bg-white dark:bg-[#101935] border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg mt-1 w-32 right-0">
+                    {["verified", "unverified"].map((st) => (
+                      <div
+                        key={st}
+                        className={`px-4 py-2 text-sm cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-800 text-gray-900 dark:text-gray-300`}
+                        onClick={() => {
+                          handleUpdateStatus(call._id, st);
+                          setShowStatusDropdown(false);
+                        }}
+                      >
+                        {capitalizeFirstLetter(st)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Services */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-white mb-3">Services</h3>
+            <div className="space-y-4">
+              {formData.services.map((s, i) => (
+                <div key={s._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-[#00000033] dark:border-gray-700">
+                  <p className="font-medium text-gray-800 dark:text-white mb-2">{s.name}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <label className="text-gray-600 dark:text-gray-400">Units</label>
+                      <input
+                        type="number"
+                        name="inputUnits"
+                        value={s.inputUnits}
+                        onChange={(e) => handleInputChange(e, i)}
+                        className="mt-1 block w-full px-2 py-1 border border-[#00000033] dark:border-gray-700 rounded focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-600 dark:text-gray-400">Base Rate</label>
+                      <input
+                        type="number"
+                        name="baseRate"
+                        value={s.baseRate}
+                        onChange={(e) => handleInputChange(e, i)}
+                        className="mt-1 block w-full px-2 py-1 border border-[#00000033] dark:border-gray-700 rounded focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-600 dark:text-gray-400">Free Units</label>
+                      <input
+                        type="number"
+                        name="freeUnits"
+                        value={s.freeUnits}
+                        onChange={(e) => handleInputChange(e, i)}
+                        className="mt-1 block w-full px-2 py-1 border border-[#00000033] dark:border-gray-700 rounded focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300"
+                        step="0.01"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-gray-600 dark:text-gray-400">Quantity</label>
+                      <input
+                        type="number"
+                        name="unitQuantity"
+                        value={s.unitQuantity}
+                        onChange={(e) => handleInputChange(e, i)}
+                        className="mt-1 block w-full px-2 py-1 border border-[#00000033] dark:border-gray-700 rounded focus:outline-none focus:ring-0 focus:border-[#00000033] dark:focus:border-gray-700 bg-white dark:bg-[#101935] text-gray-900 dark:text-gray-300"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 flex flex-col  sm:flex-row  justify-between items-center gap-3">
+
+
+          <div className="flex gap-2">
+            <button
+              onClick={onPrev}
+              disabled={currentEditIndex === 0}
+              className=" cursor-pointer p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 transition"
+            >
+              <FaArrowUp />
+            </button>
+            <button
+              onClick={onNext}
+              disabled={currentEditIndex === filteredCalls.length - 1}
+              className=" cursor-pointer p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 transition"
+            >
+              <FaArrowDown />
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="px-6 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default EditCallModal;
+// working fine 

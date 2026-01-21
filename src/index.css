@@ -1,4 +1,19 @@
+/* src/index.css */
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+input[type="date"] {
+  color-scheme: light;
+}
+
+.dark input[type="date"] {
+  color-scheme: dark;
+}
+
+
+
 
 .robotoregular {
   font-family: "Roboto", sans-serif;

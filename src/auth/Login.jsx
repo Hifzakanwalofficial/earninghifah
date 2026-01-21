@@ -95,20 +95,20 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
-      <h2 className="text-[32px] robotosemibold text-center ">
+    <div className="min-h-screen bg-gray-200 dark:bg-[#080F25] flex flex-col items-center justify-center p-4">
+      <h2 className="text-[32px] robotosemibold text-center text-gray-900 dark:text-white">
         Welcome Back
       </h2>
-      <p className="text-center text-gray-600 mb-6">
+      <p className="text-center text-gray-600 dark:text-gray-300 mb-6">
         Secure access to your dashboard
       </p>
-      <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md">
+      <div className="bg-white dark:bg-[#101935] p-10 rounded-lg shadow-md w-full max-w-md border border-[#E6E6E6] dark:border-[#263463]">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h3 className="text-[24px] text-center mb-0 robotosemibold text-gray-700">Sign in</h3>
-          <p className="text-sm text-gray-500 text-center">Use your credentials to log in</p>
+          <h3 className="text-[24px] text-center mb-0 robotosemibold text-gray-700 dark:text-white">Sign in</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">Use your credentials to log in</p>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email 
             </label>
             <input
@@ -117,13 +117,13 @@ const Login = () => {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="mt-1 p-2 w-full border border-[#E6E6E6] rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#E6E6E6]"
+              className="mt-1 p-2 w-full border border-[#E6E6E6] dark:border-gray-700 rounded-md bg-gray-50 dark:bg-[#101935] focus:outline-none focus:ring-2 focus:ring-[#E6E6E6] dark:focus:ring-gray-600 text-gray-900 dark:text-gray-300"
               required
             />
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Password
             </label>
             <div className="relative">
@@ -133,13 +133,13 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                className="mt-1 p-2 w-full border border-[#E6E6E6] rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#E6E6E6]"
+                className="mt-1 p-2 w-full border border-[#E6E6E6] dark:border-gray-700 rounded-md bg-gray-50 dark:bg-[#101935] focus:outline-none focus:ring-2 focus:ring-[#E6E6E6] dark:focus:ring-gray-600 text-gray-900 dark:text-gray-300"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 dark:text-gray-400 cursor-pointer"
               >
                 {showPassword ? <Eye size={20} /> : <EyeOff size={20} />}
               </button>

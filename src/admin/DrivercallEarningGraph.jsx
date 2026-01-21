@@ -1,101 +1,126 @@
-// import React from 'react';
-// import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+// // src/components/DriverPerformanceAnalytics.jsx
+// import React, { useState, useEffect } from "react";
+// import {
+//   BarChart,
+//   Bar,
+//   XAxis,
+//   YAxis,
+//   CartesianGrid,
+//   Tooltip,
+//   Legend,
+//   ResponsiveContainer,
+//   LabelList,
+// } from "recharts";
+// import { Baseurl } from "../Config";
 
-// const DriverPerformanceAnalytics = () => {
-//   // Your actual JSON data
-//   const driverData = [
-//     {
-//       driverId: "68d16de8c6c9a8ed54e25161",
-//       name: "Rock",
-//       totalCalls: 130,
-//       totalEarnings: 20
-//     },
-//     {
-//       driverId: "68d3dd4a41561a02a9978ed9",
-//       name: "6080",
-//       totalCalls: 48,
-//       totalEarnings: 122.25
-//     },
-//     {
-//       driverId: "68d4ee5f41561a02a997fd04",
-//       name: "Haris",
-//       totalCalls: 6,
-//       totalEarnings: 190
-//     },
-//      {
-//       driverId: "68d16de8c6c9a8ed54e25161",
-//       name: "Rock",
-//       totalCalls: 130,
-//       totalEarnings: 140
-//     },
-//     {
-//       driverId: "68d3dd4a41561a02a9978ed9",
-//       name: "6080",
-//       totalCalls: 4,
-//       totalEarnings: 12.25
-//     },
-//     {
-//       driverId: "68d4ee5f41561a02a997fd04",
-//       name: "Haris",
-//       totalCalls: 6,
-//       totalEarnings: 178.82
+// // Shimmer Component
+// const Shimmer = () => (
+//   <div className="w-full h-[450px] bg-gray-100 dark:bg-[#101935] animate-pulse">
+//     <div className="h-full flex flex-col justify-center">
+//       {[1, 2, 3, 4, 5].map((_, i) => (
+//         <div
+//           key={i}
+//           className="h-8 bg-gray-200 dark:bg-gray-700 rounded mx-4 mb-4"
+//           style={{ width: `${Math.random() * 50 + 50}%` }}
+//         />
+//       ))}
+//     </div>
+//   </div>
+// );
+
+// // Main Component
+// const DriverPerformanceAnalytics = ({ fromDate, toDate }) => {
+//   const [driverData, setDriverData] = useState([]);
+//   const [isLoading, setIsLoading] = useState(true);
+//   const [isDark, setIsDark] = useState(document.documentElement.classList.contains('dark'));
+
+//   useEffect(() => {
+//     const observer = new MutationObserver(() => {
+//       setIsDark(document.documentElement.classList.contains('dark'));
+//     });
+//     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+//     return () => observer.disconnect();
+//   }, []);
+
+//   // Fetch Data
+//   const fetchData = async (start, end) => {
+//     setIsLoading(true);
+//     try {
+//       const token = localStorage.getItem("authToken");
+//       const url = new URL(`${Baseurl}/admin/drivers-graph`);
+//       url.searchParams.append("startDate", start);
+//       url.searchParams.append("endDate", end);
+
+//       const response = await fetch(url, {
+//         method: "GET",
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//           "Content-Type": "application/json",
+//         },
+//       });
+
+//       if (!response.ok) throw new Error("Failed to fetch data");
+//       const res = await response.json();
+//       setDriverData(res.data || []);
+//     } catch (err) {
+//       console.error("Error fetching driver analytics:", err);
+//       setDriverData([]);
+//     } finally {
+//       setIsLoading(false);
 //     }
-//   ];
+//   };
 
-//   // Format data for the chart
-//   const chartData = driverData.map((driver, index) => ({
-//    name: driver.name,
-//     driverName: driver.name,
-//     totalCalls: driver.totalCalls,
-//     totalEarnings: driver.totalEarnings
+//   // Re-fetch when fromDate or toDate changes
+//   useEffect(() => {
+//     if (fromDate && toDate) {
+//       fetchData(fromDate, toDate);
+//     }
+//   }, [fromDate, toDate]);
+
+//   // Format Display Date
+//   const formatDisplayDate = (dateStr) => {
+//     if (!dateStr) return "N/A";
+//     const [y, m, d] = dateStr.split("-");
+//     const date = new Date(y, m - 1, d);
+//     return date.toLocaleDateString("en-US", {
+//       month: "short",
+//       day: "numeric",
+//       year: "numeric",
+//     });
+//   };
+
+//   const getDateRangeText = () => {
+//     if (!fromDate || !toDate) return "Loading...";
+//     return `${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}`;
+//   };
+
+//   // Chart Data Processing
+//   const maxEarnings = Math.max(...driverData.map((d) => d.totalEarnings || 0), 1);
+//   const maxCalls = Math.max(...driverData.map((d) => d.totalCalls || 0), 1);
+
+//   const scaledData = driverData.map((d) => ({
+//     name: d.name || "Unknown",
+//     driverName: d.name || "Unknown",
+//     totalCalls: d.totalCalls || 0,
+//     totalEarnings: d.totalEarnings || 0,
+//     scaledCalls: (d.totalCalls / maxCalls) * maxEarnings * 0.4,
 //   }));
 
-//   // Custom label renderer for calls (yellow bars) - on top
-//   const renderCallsLabel = (props) => {
-//     const { x, y, width, value } = props;
-//     return (
-//       <text 
-//         x={x + width / 2} 
-//         y={y - 8} 
-//         fill="#4B5563" 
-//         textAnchor="middle" 
-//         fontSize="13"
-//         fontWeight="600"
-//       >
-//         {value}
-//       </text>
-//     );
-//   };
+//   const sortedData = [...scaledData].sort((a, b) => b.totalEarnings - a.totalEarnings);
+//   const chartMinWidth = Math.max(800, sortedData.length * 120 + 100);
 
-//   // Custom label renderer for earnings (blue bars) - inside bar at middle
-//   const renderEarningsLabel = (props) => {
-//     const { x, y, width, height, value } = props;
-//     return (
-//       <text 
-//         x={x + width / 2} 
-//         y={y + height / 2} 
-//         fill="#FFFFFF" 
-//         textAnchor="middle" 
-//         dominantBaseline="middle"
-//         fontSize="13"
-//         fontWeight="600"
-//       >
-//         {/* {value} */}
-//       </text>
-//     );
-//   };
-
-//   // Custom tooltip
+//   // Custom Tooltip
 //   const CustomTooltip = ({ active, payload }) => {
-//     if (active && payload && payload.length) {
+//     if (active && payload?.length) {
+//       const data = payload[0].payload;
 //       return (
-//         <div className="bg-white p-3  rounded-lg shadow-lg border border-gray-200">
-//           <p className="font-semibold text-gray-800 mb-2">{payload[0].payload.driverName}</p>
+//         <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700">
+//           <p className="font-semibold text-gray-800 dark:text-gray-100 mb-2">{data.driverName}</p>
 //           <p className="text-sm text-amber-600 mb-1">
-//             <span className="font-medium">Total Calls:</span> {payload[0].value}
+//             <span className="font-medium">Total Calls:</span> {data.totalCalls}
 //           </p>
-//           <p className="text-sm text-sky-600">
-//             <span className="font-medium">Total Earnings:</span> ${payload[1].value}
+//           <p className="text-sm text-[#0078BD]">
+//             <span className="font-medium">Total Earnings:</span> ${data.totalEarnings.toFixed(2)}
 //           </p>
 //         </div>
 //       );
@@ -104,75 +129,93 @@
 //   };
 
 //   return (
-//     <div className="w-full bg-white p-4 md:p-6 lg:p-8">
+//     <div className="w-full bg-white dark:bg-[#101935] p-1 md:p-6 lg:p-3">
 //       {/* Header */}
-//       <div className="mb-6">
-//         <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-//           Driver Performance Analytics
-//         </h2>
-//         <p className="text-base font-semibold text-gray-700 mb-1">Earnings vs. Calls</p>
-//         <p className="text-sm text-gray-500">Last 30 Days</p>
+//       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+//         <div>
+//           <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-1">
+//             Driver Performance Analytics
+//           </h2>
+//           <p className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">Earnings vs. Calls</p>
+//           <p className="text-sm text-gray-500 dark:text-gray-400">{getDateRangeText()}</p>
+//         </div>
+
+     
 //       </div>
 
 //       {/* Chart */}
-//       <div className="w-full" style={{ height: '450px' }}>
-//         <ResponsiveContainer width="100%" height="100%">
-//           <BarChart
-//             data={chartData}
-//             margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
-//             barGap={0}
-//             barCategoryGap="20%"
-//           >
-//             <CartesianGrid 
-//               strokeDasharray="3 3" 
-//               stroke="#00001A26" 
-//               vertical={true}
-//             />
-//             <XAxis 
-//               dataKey="name" 
-//               axisLine={false}
-//               tickLine={false}
-//               tick={{ fill: '#6B7280', fontSize: 13, fontWeight: 500 }}
-//               dy={10}
-//             />
-//             <YAxis 
-//               axisLine={false}
-//               tickLine={false}
-//               tick={{ fill: '#6B7280', fontSize: 13,color:"#000000B2", }}
-//               tickFormatter={(value) => `$${value}`}
-//               domain={[0, 'auto']}
-//               dx={-5}
-//             />
-//             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
-//             <Legend 
-//               verticalAlign="bottom" 
-//               height={36}
-//               iconType="square"
-//               iconSize={14}
-//               wrapperStyle={{
-//                 paddingTop: '25px',
-//                 fontSize: '14px',
-//                 fontWeight: 500,
-//               }}
-//             />
-//             <Bar 
-//               dataKey="totalCalls" 
-//               fill="#F5AF1B" 
-//               name="Total Calls"
-//               radius={[0, 0, 0, 0]}
-//               maxBarSize={45}
-//               label={renderCallsLabel}
-//             />
-//             <Bar 
-//               dataKey="totalEarnings" 
-//               fill="#7DA7D9" 
-//               name="Total Earnings"
-//               radius={[0, 0, 0, 0]}
-//               maxBarSize={45}
-//               label={renderEarningsLabel}
-//             />
-//           </BarChart>
-//         </ResponsiveContainer>
+//       <div className="w-full scrollbar-hide bg-white dark:bg-gray-900" style={{ height: "450px", overflowX: "auto" }}>
+//         <style>{`.scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+
+//         {isLoading ? (
+//           <Shimmer />
+//         ) : sortedData.length === 0 ? (
+//           <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+//             No data available for selected range.
+//           </div>
+//         ) : (
+//           <div style={{ minWidth: `${chartMinWidth}px`, height: "100%" }}>
+//             <ResponsiveContainer width="100%" height="100%">
+//               <BarChart
+//                 data={sortedData}
+//                 margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
+//                 barGap={4}
+//                 barCategoryGap={30}
+//               >
+//                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#e5e7eb"} vertical={true} />
+//                 <XAxis
+//                   dataKey="name"
+//                   axisLine={false}
+//                   tickLine={false}
+//                   tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 13, fontWeight: 500 }}
+//                   dy={10}
+//                 />
+//                 <YAxis
+//                   axisLine={false}
+//                   tickLine={false}
+//                   tick={{ fill: isDark ? "#9CA3AF" : "#6B7280", fontSize: 13 }}
+//                   tickFormatter={(v) => `$${v}`}
+//                   domain={[0, "auto"]}
+//                   dx={-5}
+//                 />
+//                 <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? "rgba(55, 65, 81, 0.1)" : "rgba(0, 0, 0, 0.05)" }} />
+//                 <Legend
+//                   verticalAlign="bottom"
+//                   height={36}
+//                   iconType="square"
+//                   iconSize={14}
+//                   wrapperStyle={{ paddingTop: "25px", fontSize: "14px", fontWeight: 500, color: isDark ? "#9CA3AF" : "#6B7280" }}
+//                 />
+
+//                 <Bar
+//                   dataKey="scaledCalls"
+//                   fill="#F5AF1B"
+//                   name="Total Calls"
+//                   barSize={30}
+//                   radius={[4, 4, 0, 0]}
+//                 >
+//                   <LabelList
+//                     dataKey="totalCalls"
+//                     position="top"
+//                     fill={isDark ? "#F3F4F6" : "#374151"}
+//                     fontSize={13}
+//                     fontWeight={600}
+//                     offset={10}
+//                     stroke="white"
+//                     strokeWidth={0.5}
+//                   />
+//                 </Bar>
+//                 <Bar
+//                   dataKey="totalEarnings"
+//                   fill="#0078BD"
+//                   name="Total Earnings"
+//                   barSize={30}
+//                   radius={[4, 4, 0, 0]}
+//                 />
+//               </BarChart>
+//             </ResponsiveContainer>
+//           </div>
+//         )}
 //       </div>
 //     </div>
 //   );
@@ -184,201 +227,284 @@
 
 
 
+
+
+
+
+
 import React, { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LabelList,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Baseurl } from "../Config";
 
-const Shimmer = () => {
-  return (
-    <div className="w-full h-[450px] bg-gray-100 animate-pulse">
-      <div className="h-full flex flex-col justify-center">
-        {[1, 2, 3, 4, 5].map((_, index) => (
-          <div
-            key={index}
-            className="h-8 bg-gray-200 rounded mx-4 mb-4"
-            style={{ width: `${Math.random() * 50 + 50}%` }}
-          ></div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
-const DriverPerformanceAnalytics = () => {
-  const [driverData, setDriverData] = useState([]);
+const DriverCallsPieChart = ({ fromDate, toDate }) => {
+  const [drivers, setDrivers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fixed colors — 10 vibrant colors
+  const COLORS = [
+    "#F97316", // orange
+    "#3B82F6", // blue
+    "#10B981", // green
+    "#8B5CF6", // purple
+    "#F43F5E", // red
+    "#FACC15", // yellow
+    "#06B6D4", // cyan
+    "#EC4899", // pink
+    "#14B8A6", // teal
+    "#6366F1", // indigo
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
+      // Change: Allow single date selection by setting toDate to fromDate if it's empty
+      if (!fromDate) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
       try {
         const token = localStorage.getItem("authToken");
-        const response = await fetch(`${Baseurl}/admin/drivers-graph`, {
+        const url = new URL(`${Baseurl}/admin/drivers-graph`);
+        url.searchParams.append("startDate", fromDate);
+        
+        // FIXED: Removed +1 day logic — now sends exact date
+        const effectiveToDate = toDate || fromDate;
+        if (effectiveToDate) {
+          url.searchParams.append("endDate", effectiveToDate);
+        }
+
+        console.log("Fetching driver graph with URL:", url.toString()); // Debug log
+
+        const response = await fetch(url, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         });
-        if (!response.ok) throw new Error("Failed to fetch data");
+
+        if (!response.ok) throw new Error("Failed to fetch");
         const res = await response.json();
-        setDriverData(res.data || []);
+        console.log("Driver graph data received:", res); // Debug log
+        const rawData = res.data || [];
+
+        // Sort by calls descending → this order decides color
+        const sortedByCalls = [...rawData].sort(
+          (a, b) => (b.totalCalls || 0) - (a.totalCalls || 0)
+        );
+
+        // Assign fixed color to each driver based on calls rank
+        const driversWithColor = sortedByCalls.map((driver, index) => ({
+          name: driver.name || "Unknown Driver",
+          totalCalls: driver.totalCalls || 0,
+          totalEarnings: driver.totalEarnings || 0,
+          color: COLORS[index % COLORS.length], // ← FIXED COLOR FOREVER
+        }));
+
+        setDrivers(driversWithColor);
       } catch (error) {
-        console.error("Error fetching driver data:", error);
-        setDriverData([]);
+        console.error("Error:", error);
+        setDrivers([]);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchData();
-  }, []);
+  }, [fromDate, toDate]);
 
-  const maxEarnings = Math.max(...driverData.map((d) => d.totalEarnings || 0), 1);
-  const maxCalls = Math.max(...driverData.map((d) => d.totalCalls || 0), 1);
+  const totalCalls = drivers.reduce((sum, d) => sum + d.totalCalls, 0);
+  const totalEarnings = drivers.reduce((sum, d) => sum + d.totalEarnings, 0);
 
-  const scaledData = driverData.map((driver) => ({
-    name: driver.name || "Unknown",
-    driverName: driver.name || "Unknown",
-    totalCalls: driver.totalCalls || 0,
-    totalEarnings: driver.totalEarnings || 0,
-    scaledCalls: (driver.totalCalls / maxCalls) * maxEarnings * 0.4,
+  // Data for Calls Pie
+  const callsPieData = drivers.map(d => ({
+    name: d.name,
+    value: d.totalCalls,
+    color: d.color,
   }));
 
-  const sortedData = [...scaledData].sort((a, b) => b.totalEarnings - a.totalEarnings);
+  // Data for Earnings Pie — sort by earnings but keep SAME color
+  const earningsPieData = [...drivers]
+    .sort((a, b) => b.totalEarnings - a.totalEarnings)
+    .map(d => ({
+      name: d.name,
+      value: d.totalEarnings,
+      color: d.color, // ← SAME COLOR AS IN CALLS
+    }));
 
-  const categoryWidth = 120;
-  const chartMinWidth = Math.max(800, sortedData.length * categoryWidth + 100);
-
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0]?.payload || {};
+  const CallsTooltip = ({ active, payload }) => {
+    if (active && payload?.length) {
+      const data = payload[0].payload;
+      const percent = totalCalls > 0 ? ((data.value / totalCalls) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-          <p className="font-semibold text-gray-800 mb-2">{data.driverName}</p>
-          <p className="text-sm text-amber-600 mb-1">
-            <span className="font-medium">Total Calls:</span> {data.totalCalls}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-2xl border border-gray-300 dark:border-gray-600">
+          <p className="font-bold text-gray-900 dark:text-white">{data.name}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Calls: <strong className="text-blue-600">{data.value.toLocaleString()}</strong>
           </p>
-          <p className="text-sm text-[#0078BD]">
-            <span className="font-medium">Total Earnings:</span> ${data.totalEarnings.toFixed(2)}
-          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{percent}%</p>
         </div>
       );
     }
     return null;
   };
 
+  const EarningsTooltip = ({ active, payload }) => {
+    if (active && payload?.length) {
+      const data = payload[0].payload;
+      const percent = totalEarnings > 0 ? ((data.value / totalEarnings) * 100).toFixed(1) : 0;
+      return (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-2xl border border-gray-300 dark:border-gray-600">
+          <p className="font-bold text-gray-900 dark:text-white">{data.name}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Earnings: <strong className="text-white dark:text-white">${data.value.toLocaleString()}</strong>
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{percent}%</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderLabel = ({ percent }) => percent > 0.08 ? `${(percent * 100).toFixed(0)}%` : "";
+
+  if (isLoading) {
+    return (
+      <div className="w-full bg-white dark:bg-[#101935] rounded-xl shadow-2xl p-6 animate-pulse">
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-6"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full bg-white p-4">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-          Driver Performance Analytics
-        </h2>
-        <p className="text-base font-semibold text-gray-700 mb-1">Earnings vs. Calls</p>
-        <p className="text-sm text-gray-500">Last 30 Days</p>
+    <div className="w-full bg-white dark:bg-[#101935] rounded-xl shadow-2xl overflow-hidden">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          Driver Activity Analytics
+        </h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Calls & Earnings Distribution
+        </p>
       </div>
 
-      {/* Chart */}
-      <div
-        className="w-full scrollbar-hide"
-        style={{
-          height: "450px",
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-        }}
-      >
-        <style>{`
-          .scrollbar-hide::-webkit-scrollbar { display: none; }
-        `}</style>
-
-        {isLoading ? (
-          <Shimmer />
-        ) : (
-          <div style={{ minWidth: `${chartMinWidth}px`, height: "100%" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={sortedData}
-                margin={{ top: 40, right: 30, left: 20, bottom: 30 }}
-                barGap={4}
-                barCategoryGap={30}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#00000020" vertical={true} />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6B7280", fontSize: 13, fontWeight: 500 }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: "#6B7280", fontSize: 13 }}
-                  tickFormatter={(value) => `$${value}`}
-                  domain={[0, "auto"]}
-                  dx={-5}
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(0, 0, 0, 0.05)" }} />
-                <Legend
-                  verticalAlign="bottom"
-                  height={36}
-                  iconType="square"
-                  iconSize={14}
-                  wrapperStyle={{
-                    paddingTop: "25px",
-                    fontSize: "14px",
-                    fontWeight: 500,
-                  }}
-                />
-
-                {/* 🟡 Total Calls Bar */}
-                <Bar
-                  dataKey="scaledCalls"
-                  fill="#F5AF1B"
-                  name="Total Calls"
-                  barSize={30}
-                  radius={[4, 4, 0, 0]}
-                >
-                  {/* 👇 Labels Above Each Bar */}
-                  <LabelList
-                    dataKey="totalCalls"
-                    position="top"
-                    formatter={(value) => `${value}`}
-                    fill="#374151"
-                    fontSize={13}
-                    fontWeight={600}
-                    offset={10} // pushes label upward a bit
-                    stroke="white" // helps text stay readable over light backgrounds
-                    strokeWidth={0.5}
-                  />
-                </Bar>
-
-                {/* 🟦 Total Earnings Bar */}
-                <Bar
-                  dataKey="totalEarnings"
-                  fill="#0078BD"
-                  name="Total Earnings"
-                  barSize={30}
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calls Pie */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 shadow-inner">
+            <h3 className="text-center text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
+              By Total Calls
+            </h3>
+            {drivers.length === 0 ? (
+              <p className="text-center text-gray-500 h-64 flex items-center justify-center">No data</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={callsPieData}
+                    dataKey="value"
+                    cx="50%" cy="50%"
+                    outerRadius="85%"
+                    labelLine={false}
+                    label={renderLabel}
+                  >
+                    {callsPieData.map((entry, i) => (
+                      <Cell key={`call-${i}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CallsTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        )}
+
+          {/* Earnings Pie */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 shadow-inner">
+            <h3 className="text-center text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
+              By Total Earnings
+            </h3>
+            {drivers.length === 0 ? (
+              <p className="text-center text-gray-500 h-64 flex items-center justify-center">No data</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={earningsPieData}
+                    dataKey="value"
+                    cx="50%" cy="50%"
+                    outerRadius="85%"
+                    labelLine={false}
+                    label={renderLabel}
+                  >
+                    {earningsPieData.map((entry, i) => (
+                      <Cell key={`earn-${i}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<EarningsTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+          All Drivers ({drivers.length})
+        </h3>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table className="w-full min-w-[700px] bg-gray-50 dark:bg-gray-900">
+            <thead className="bg-gray-100 dark:bg-gray-800">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Driver</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Calls</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Earnings</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">% Calls</th>
+                {/* <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">% Earnings</th> */}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {drivers.map((driver, i) => (
+                <tr key={i} className="hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-6 h-6 rounded-full shadow-lg border-2 border-white dark:border-gray-900"
+                        style={{ backgroundColor: driver.color }}
+                      />
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {driver.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-700 dark:text-gray-300">
+                    {driver.totalCalls.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-700 dark:text-gray-300">
+                    ${driver.totalEarnings.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-center font-bold text-black dark:text-white">
+                    {totalCalls > 0 ? ((driver.totalCalls / totalCalls) * 100).toFixed(1) : 0}%
+                  </td>
+                  {/* <td className="px-6 py-4 text-center font-bold text-black dark:text-white">
+                    {totalEarnings > 0 ? ((driver.totalEarnings / totalEarnings) * 100).toFixed(1) : 0}%
+                  </td> */}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
 
-export default DriverPerformanceAnalytics;
+export default DriverCallsPieChart;
+
+

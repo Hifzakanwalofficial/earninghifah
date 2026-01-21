@@ -1,3 +1,4 @@
+// src/Component/Linechart.jsx
 import React, { useEffect, useState, useRef } from "react";
 import {
   LineChart,
@@ -11,15 +12,30 @@ import {
 } from "recharts";
 import { Baseurl } from "../../Config";
 
-const Linechart = () => {
+const Linechart = ({ fromDate, toDate }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [size, setSize] = useState({ width: 0, height: 600 });
   const [isMobile, setIsMobile] = useState(false);
+  const [isDark, setIsDark] = useState(false);
   const containerRef = useRef(null);
 
-  // Calculate initial width and handle resize
+  // === DARK MODE DETECTION ===
+  useEffect(() => {
+    const updateDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+
+    updateDarkMode();
+
+    const observer = new MutationObserver(updateDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // === RESIZE HANDLER ===
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 1024;
@@ -36,25 +52,32 @@ const Linechart = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // === FETCH DATA WITH FILTER ===
   useEffect(() => {
+    if (!fromDate || !toDate) {
+      setLoading(false);
+      return;
+    }
+
     const fetchCycleProgress = async () => {
       setLoading(true);
       setError(null);
 
       try {
         const token = localStorage.getItem("authToken");
-        if (!token) {
-          throw new Error("No auth token found. Please login.");
-        }
+        if (!token) throw new Error("No auth token found. Please login.");
 
-        const response = await fetch(
-          `${Baseurl}/driver/cycle-progress`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        // === ADD startDate & endDate ===
+        const url = new URL(`${Baseurl}/driver/cycle-progress`);
+        url.searchParams.append('startDate', fromDate);
+        url.searchParams.append('endDate', toDate);
+
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -62,27 +85,33 @@ const Linechart = () => {
         }
 
         const result = await response.json();
-        console.log("API Response:", result); // Debug log
+        console.log("LineChart API Response:", result);
 
-        // Filter data to include only dates up to today (Oct 27, 2025)
-        const today = new Date();
-        const chartData = result.progress
-          .filter((item) => new Date(item.date) <= today)
+        // === FILTER & MAP DATA ===
+        const chartData = (result.progress || [])
+          .filter((item) => {
+            const itemDate = new Date(item.date);
+            const start = new Date(fromDate);
+            const end = new Date(toDate);
+            return itemDate >= start && itemDate <= end;
+          })
           .map((item) => {
-            // Initialize earnings for specific services
             let remsEarnings = 0;
             let rpmEarnings = 0;
             let pr1Earnings = 0;
 
-            // Sum earnings from servicesUsed in calls
-            item.calls.forEach((call) => {
-              call.servicesUsed.forEach((service) => {
+            // === Percentage Applied from API ===
+            const percentage = result.percentage || 100;  // percentage to be applied to all earnings
+
+            // Calculate earnings based on services used
+            (item.calls || []).forEach((call) => {
+              (call.servicesUsed || []).forEach((service) => {
                 if (service.name === "REMS:KMS ENROUTE") {
-                  remsEarnings += service.total;
+                  remsEarnings += (service.total || 0) * (percentage / 100);  // Apply percentage
                 } else if (service.name === "RPM:KMS UNDER TOW") {
-                  rpmEarnings += service.total;
+                  rpmEarnings += (service.total || 0) * (percentage / 100);  // Apply percentage
                 } else if (service.name === "PR1:WAITING TIME") {
-                  pr1Earnings += service.total;
+                  pr1Earnings += (service.total || 0) * (percentage / 100);  // Apply percentage
                 }
               });
             });
@@ -92,14 +121,14 @@ const Linechart = () => {
                 month: "short",
                 day: "numeric",
               }),
-              totalCalls: item.totalCalls,
+              totalCalls: item.totalCalls || 0,
               rems: remsEarnings,
               rpm: rpmEarnings,
               pr1: pr1Earnings,
             };
           });
 
-        console.log("Chart Data:", chartData); // Debug log
+        console.log("LineChart Data with Percentage Applied:", chartData);
         setData(chartData);
       } catch (err) {
         setError(err.message);
@@ -109,14 +138,14 @@ const Linechart = () => {
     };
 
     fetchCycleProgress();
-  }, []);
+  }, [fromDate, toDate]);
 
-  // Custom Tooltip Formatter
+  // === CUSTOM TOOLTIP ===
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white border border-gray-300 p-3 rounded shadow">
-          <p className="text-gray-700 text-[14px] font-semibold">{label}</p>
+        <div className="bg-white dark:bg-[#101935] border border-gray-300 p-3 rounded shadow">
+          <p className={`text-[14px] font-semibold ${isDark ? 'text-[#95A0C6]' : 'text-gray-700'}`}>{label}</p>
           {payload.map((entry, index) => (
             <p key={index} style={{ color: entry.stroke }}>
               {entry.name}:{" "}
@@ -131,23 +160,58 @@ const Linechart = () => {
     return null;
   };
 
+  // === CUSTOM LEGEND ===
+  const CustomLegend = (props) => {
+    const { payload } = props;
+    return (
+      <ul style={{
+        display: "flex",
+        justifyContent: "center",
+        flexWrap: "wrap",
+        gap: "10px",
+        textAlign: "center",
+        marginTop: "15px",
+        listStyle: "none",
+        padding: 0,
+        margin: 0,
+        fontSize: 14,
+        color: isDark ? "#95A0C6" : "#374151",
+      }}>
+        {payload.map((entry, index) => (
+          <li key={`legend-${index}`} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+            <div
+              style={{
+                width: 14,
+                height: 2,
+                backgroundColor: entry.color,
+              }}
+            />
+            <span>{entry.value}</span>
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
+  // === LOADING STATE ===
   if (loading) {
     return (
       <div
         ref={containerRef}
-        className="flex items-center justify-center bg-white p-4 rounded-xl shadow relative"
+        className="flex items-center justify-center bg-white dark:bg-[#101935] p-4 rounded-xl shadow"
         style={{ width: size.width, height: size.height }}
       >
-        <p>Loading chart data...</p>
+        <p className={`${isDark ? 'text-[#95A0C6]' : 'text-gray-600'}`}>Loading chart...</p>
       </div>
     );
   }
 
+  // === ERROR STATE ===
   if (error) {
     return (
       <div
         ref={containerRef}
-        className="flex items-center justify-center bg-white p-4 rounded-xl shadow relative"
+        className="flex items-center justify-center bg-white dark:bg-[#101935] p-4 rounded-xl shadow"
         style={{ width: size.width, height: size.height }}
       >
         <p className="text-red-500">Error: {error}</p>
@@ -155,32 +219,33 @@ const Linechart = () => {
     );
   }
 
+  // === NO DATA ===
+  if (data.length === 0) {
+    return (
+      <div
+        ref={containerRef}
+        className="flex items-center justify-center bg-white dark:bg-[#101935] p-4 rounded-xl shadow"
+        style={{ width: size.width, height: size.height }}
+      >
+        <p className={`${isDark ? 'text-[#95A0C6]' : 'text-gray-500'}`}>No data available for selected range.</p>
+      </div>
+    );
+  }
+
+  // === MAIN CHART ===
   return (
     <div
       ref={containerRef}
-      className="bg-white p-4 rounded-xl shadow outline-none focus:outline-none relative"
+      className="bg-white dark:bg-[#101935] p-4 rounded-xl shadow outline-none focus:outline-none"
       style={{ width: size.width, height: size.height }}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{ top: 20, right: 30, left: -20, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis />
+        <LineChart data={data} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2883F9' : '#e5e5e5'} />
+          <XAxis dataKey="date" tick={{ fill: isDark ? '#95A0C6' : '#334155' }} />
+          <YAxis tick={{ fill: isDark ? '#95A0C6' : '#334155' }} />
           <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{
-              fontSize: 14,
-              display: "flex",
-              justifyContent: "center",
-              flexWrap: "wrap",
-              gap: "10px",
-              textAlign: "center",
-              marginTop: "15px",
-            }}
-          />
+          <Legend content={CustomLegend} />
 
           {/* Total Calls */}
           <Line
@@ -193,7 +258,7 @@ const Linechart = () => {
             activeDot={{ r: 6 }}
           />
 
-          {/* REMS:KMS ENROUTE Earnings */}
+          {/* REMS Earnings */}
           <Line
             type="monotone"
             dataKey="rems"
@@ -204,7 +269,7 @@ const Linechart = () => {
             activeDot={{ r: 6 }}
           />
 
-          {/* RPM:KMS UNDER TOW Earnings */}
+          {/* RPM Earnings */}
           <Line
             type="monotone"
             dataKey="rpm"
@@ -215,7 +280,7 @@ const Linechart = () => {
             activeDot={{ r: 6 }}
           />
 
-          {/* PR1:WAITING TIME Earnings */}
+          {/* PR1 Earnings */}
           <Line
             type="monotone"
             dataKey="pr1"

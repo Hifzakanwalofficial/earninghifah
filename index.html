@@ -8,10 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./src/index.css">
     <link rel="shortcut icon" href="./src/images/logo.svg" type="image/x-icon">
+    <script>
+  const savedDark = localStorage.getItem("darkMode") === "true";
+  if (savedDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+</script>
+
     <title>Earning Dashboard</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
   </body>
 </html>

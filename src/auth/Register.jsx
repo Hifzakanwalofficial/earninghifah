@@ -66,25 +66,25 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-200 flex flex-col items-center justify-center p-4">
-      <h2 className="text-[32px] font-semibold text-center text-gray-800 mb-4">
+    <div className="min-h-screen bg-gray-200 dark:bg-[#080F25] flex flex-col items-center justify-center p-4">
+      <h2 className="text-[32px] font-semibold text-center text-gray-800 dark:text-white mb-4">
         Register
       </h2>
-      <p className="text-center text-gray-600 mb-6">Create Your Account</p>
+      <p className="text-center text-gray-600 dark:text-gray-300 mb-6">Create Your Account</p>
 
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+      <div className="bg-white dark:bg-[#101935] border-[#E6E6E6] p-6 rounded-lg shadow-md w-full max-w-md border dark:border-[#263463]">
         <div className="space-y-4">
-          <h3 className="text-[24px] text-center robotosemibold text-gray-700">
+          <h3 className="text-[24px] text-center robotosemibold text-gray-700 dark:text-white">
             Sign up
           </h3>
-          <p className="text-[16px] text-gray-500 text-center">
+          <p className="text-[16px] text-gray-500 dark:text-gray-400 text-center">
             Provide details to create your account
           </p>
 
           <form onSubmit={handleSubmit}>
             {/* Name Field */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Name
               </label>
               <input
@@ -93,15 +93,14 @@ const Register = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Enter your name"
-                className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none"
-                style={{ borderColor: "#CCCCCC" }}
+                className="mt-1 p-2 w-full border border-[#CCCCCC] dark:border-gray-700 rounded-md bg-gray-50 dark:bg-[#101935] focus:outline-none focus:ring-2 focus:ring-[#CCCCCC] dark:focus:ring-gray-600 text-gray-900 dark:text-gray-300"
                 required
               />
             </div>
 
             {/* Email Field */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email or User Name
               </label>
               <input
@@ -110,15 +109,14 @@ const Register = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
-                className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none"
-                style={{ borderColor: "#CCCCCC" }}
+                className="mt-1 p-2 w-full border border-[#CCCCCC] dark:border-gray-700 rounded-md bg-gray-50 dark:bg-[#101935] focus:outline-none focus:ring-2 focus:ring-[#CCCCCC] dark:focus:ring-gray-600 text-gray-900 dark:text-gray-300"
                 required
               />
             </div>
 
             {/* Password Field */}
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
               </label>
               <input
@@ -127,8 +125,7 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                className="mt-1 p-2 w-full border rounded-md bg-gray-50 focus:outline-none"
-                style={{ borderColor: "#CCCCCC" }}
+                className="mt-1 p-2 w-full border border-[#CCCCCC] dark:border-gray-700 rounded-md bg-gray-50 dark:bg-[#101935] focus:outline-none focus:ring-2 focus:ring-[#CCCCCC] dark:focus:ring-gray-600 text-gray-900 dark:text-gray-300"
                 required
               />
             </div>
@@ -143,7 +140,7 @@ const Register = () => {
             </button>
 
             {/* Login Link */}
-            <p className="text-sm text-center mt-4 robotomedium">
+            <p className="text-sm text-center mt-4 robotomedium text-gray-700 dark:text-gray-300">
               Already have an account?{" "}
               <Link
                 to="/login"

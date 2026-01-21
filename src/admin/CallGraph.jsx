@@ -1,282 +1,264 @@
-import React, { useState, useEffect } from 'react';
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LabelList } from 'recharts';
-import { Baseurl } from '../Config';
+// src/components/ClientActivityGraph.jsx
+import React, { useState, useEffect } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Baseurl } from "../Config";
 
-const Shimmer = () => {
-  return (
-    <div className="w-full h-[500px] bg-gray-100 animate-pulse">
-      <div className="h-full flex flex-col justify-center">
-        {[1, 2, 3, 4, 5].map((_, index) => (
-          <div
-            key={index}
-            className="h-8 bg-gray-200 rounded mx-4 mb-4"
-            style={{ width: `${Math.random() * 50 + 50}%` }}
-          ></div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const CallGraph = () => {
-  const [clientData, setClientData] = useState([]);
-  const [chartWidth, setChartWidth] = useState('100%');
-  const [isMobile, setIsMobile] = useState(false);
+const ClientActivityGraph = ({ fromDate, toDate }) => {
+  const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const COLORS = [
+    "#F97316", "#3B82F6", "#10B981", "#8B5CF6",
+    "#F43F5E", "#FACC15", "#06B6D4", "#EC4899",
+    "#14B8A6", "#6366F1"
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
+      // Change: Allow single date selection by setting toDate to fromDate if it's empty
+      if (!fromDate) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
       try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${Baseurl}/admin/clients-graph`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
+        const token = localStorage.getItem("authToken");
+        const url = new URL(`${Baseurl}/admin/clients-graph`);
+        url.searchParams.append("startDate", fromDate);
+        
+        // FIXED: Now sends EXACT selected date (no +1 day added)
+        const effectiveToDate = toDate || fromDate;
+        if (effectiveToDate) {
+          url.searchParams.append("endDate", effectiveToDate);
         }
+
+        console.log("Fetching client graph with URL:", url.toString()); // Debug log
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) throw new Error("Failed to fetch");
         const res = await response.json();
+        console.log("Client graph data received:", res); // Debug log
         const rawData = res.data || [];
-        const sortedData = [...rawData].sort((a, b) => b.totalCalls - a.totalCalls);
-        const formattedData = sortedData.map(client => ({
-          name: "Client call",
-          clientName: client.name,
-          calls: client.totalCalls,
-          earnings: client.totalEarnings
+
+        // Sort by calls descending → fixed color order
+        const sortedByCalls = [...rawData].sort((a, b) => (b.totalCalls || 0) - (a.totalCalls || 0));
+
+        // Assign fixed color to each client
+        const clientsWithColor = sortedByCalls.map((client, index) => ({
+          name: client.name || "Unknown Client",
+          totalCalls: client.totalCalls || 0,
+          totalEarnings: client.totalEarnings || 0,
+          color: COLORS[index % COLORS.length],
         }));
-        setClientData(formattedData);
+
+        setClients(clientsWithColor);
       } catch (error) {
-        console.error('Error fetching client data:', error);
-        setClientData([]);
+        console.error("Error:", error);
+        setClients([]);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchData();
-  }, []);
+  }, [fromDate, toDate]);
 
-  useEffect(() => {
-    if (clientData.length > 0) {
-      if (isMobile) {
-        const barSpacing = 60;
-        setChartWidth(clientData.length * barSpacing);
-      } else {
-        setChartWidth('100%');
-      }
-    }
-  }, [clientData, isMobile]);
+  const totalCalls = clients.reduce((sum, c) => sum + c.totalCalls, 0);
+  const totalEarnings = clients.reduce((sum, c) => sum + c.totalEarnings, 0);
 
-  // Custom earnings label for line
-  const renderEarningsLabel = (props) => {
-    const { x, y, payload } = props;
-    const earnings = payload?.earnings || 0;
-    if (earnings === 0) return null;
-    const formatted = earnings < 1000 ? `$${Math.round(earnings)}` : `$${(earnings / 1000).toFixed(1)}k`;
-    return (
-      <text 
-        x={x} 
-        y={y - 10} 
-        textAnchor="middle" 
-        fill="#0078BD" 
-        fontSize="11"
-        fontWeight="500"
-      >
-        {formatted}
-      </text>
-    );
-  };
+  const callsPieData = clients.map(c => ({
+    name: c.name,
+    value: c.totalCalls,
+    color: c.color,
+  }));
 
-  // Custom dot component
-  const renderDot = (props) => {
-    const { cx, cy } = props;
-    return (
-      <g>
-        <circle cx={cx} cy={cy} r={4} fill="#FFFFFF" stroke="#0078BD" strokeWidth={2} />
-      </g>
-    );
-  };
+  const earningsPieData = [...clients]
+    .sort((a, b) => b.totalEarnings - a.totalEarnings)
+    .map(c => ({
+      name: c.name,
+      value: c.totalEarnings,
+      color: c.color,
+    }));
 
-  const CustomTooltip = ({ active, payload }) => {
+  const CallsTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
-      const data = payload[0]?.payload;
+      const d = payload[0].payload;
+      const percent = totalCalls > 0 ? ((d.value / totalCalls) * 100).toFixed(1) : 0;
       return (
-        <div className="bg-white px-3 py-2 rounded shadow-lg border border-gray-200">
-          <p className="text-sm font-semibold text-gray-800 mb-1">{data?.clientName || 'Client'}</p>
-          <p className="text-xs text-gray-600">Calls: <span className="font-semibold">{data?.calls || 0}</span></p>
-          <p className="text-xs text-gray-600">Earnings: <span className="font-semibold">${(data?.earnings || 0).toLocaleString()}</span></p>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700">
+          <p className="font-bold text-gray-900 dark:text-white">{d.name}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Calls: <strong className="text-blue-600">{d.value.toLocaleString()}</strong>
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{percent}% of total</p>
         </div>
       );
     }
     return null;
   };
 
-  const barSize = isMobile ? 50 : 50;
+  const EarningsTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload;
+      const percent = totalEarnings > 0 ? ((d.value / totalEarnings) * 100).toFixed(1) : 0;
+      return (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700">
+          <p className="font-bold text-gray-900 dark:text-white">{d.name}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Earnings: <strong className="text-black dark:text-white">${d.value.toLocaleString()}</strong>
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{percent}% of total</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderLabel = ({ percent }) => {
+    return percent > 0.06 ? `${(percent * 100).toFixed(0)}%` : "";
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full bg-white dark:bg-[#101935] rounded-xl shadow-2xl p-6 animate-pulse">
+        <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-6"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+          <div className="h-80 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full bg-white p-6 md:p-0">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">
+    <div className="w-full bg-white dark:bg-[#101935] rounded-xl shadow-2xl overflow-hidden">
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           Client Activity Analytics
         </h1>
-        <p className="text-sm text-gray-600">Visualize calls and earnings per client.</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          Calls & Earnings Distribution
+        </p>
       </div>
 
-      {/* Chart Container */}
-      <div className="w-full h-[500px] overflow-x-auto">
-        {isLoading ? (
-          <Shimmer />
-        ) : (
-          <ResponsiveContainer width={chartWidth} height="100%">
-            <ComposedChart
-              data={clientData}
-              margin={{ top: 35, right: 80, left: -5, bottom: 60 }}
-            >
-              <defs>
-                <linearGradient id="greenBar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#86EFAC" stopOpacity={0.95}/>
-                  <stop offset="95%" stopColor="#4ADE80" stopOpacity={0.9}/>
-                </linearGradient>
-              </defs>
-              
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                stroke="#00001A26" 
-                vertical={true}
-              />
-              
-              <XAxis 
-                dataKey="clientName" 
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#6B7280', fontSize: 11 }}
-                height={50}
-              />
-              
-              <YAxis 
-                yAxisId="left"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: '#6B7280', fontSize: 11 }}
-                domain={[0, 'dataMax']}
-                width={40}
-              />
-              
-              <Tooltip content={<CustomTooltip />} cursor={false} />
-              
-              <Legend
-                verticalAlign="bottom"
-                height={40}
-                content={() => (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      gap: '30px',
-                      paddingTop: '10px',
-                    }}
+      <div className="p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Calls Pie */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 shadow-inner">
+            <h3 className="text-center text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
+              By Total Calls
+            </h3>
+            {clients.length === 0 ? (
+              <p className="text-center text-gray-500 h-64 flex items-center justify-center">No data</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={callsPieData}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="85%"
+                    labelLine={false}
+                    label={renderLabel}
                   >
-                    {/* Total Calls */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {callsPieData.map((entry, index) => (
+                      <Cell key={`call-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CallsTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* Earnings Pie */}
+          <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 shadow-inner">
+            <h3 className="text-center text-lg font-semibold mb-6 text-gray-800 dark:text-gray-200">
+              By Total Earnings
+            </h3>
+            {clients.length === 0 ? (
+              <p className="text-center text-gray-500 h-64 flex items-center justify-center">No data</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={320}>
+                <PieChart>
+                  <Pie
+                    data={earningsPieData}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius="85%"
+                    labelLine={false}
+                    label={renderLabel}
+                  >
+                    {earningsPieData.map((entry, index) => (
+                      <Cell key={`earn-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<EarningsTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-white">
+          All Clients ({clients.length})
+        </h3>
+        <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
+          <table className="w-full min-w-[700px] bg-gray-50 dark:bg-gray-900">
+            <thead className="bg-gray-100 dark:bg-gray-800">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Client</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Calls</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">Earnings</th>
+                <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">% Calls</th>
+                {/* <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase">% Earnings</th> */}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {clients.map((client, index) => (
+                <tr key={index} className="hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
                       <div
-                        style={{
-                          width: 12,
-                          height: 12,
-                          backgroundColor: '#69BA6C',
-                          borderRadius: '0px',
-                        }}
+                        className="w-7 h-7 rounded-full shadow-lg border-2 border-white dark:border-gray-900"
+                        style={{ backgroundColor: client.color }}
                       />
-                      <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
-                        Total Calls
-                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">{client.name}</span>
                     </div>
-
-                    {/* Total Earnings */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div
-                        style={{
-                          width: 12,
-                          height: 12,
-                          backgroundColor: '#0078BD',
-                          borderRadius: '0%',
-                        }}
-                      />
-                      <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
-                        Total Earnings
-                      </span>
-                    </div>
-                  </div>
-                )}
-              />
-
-              {/* Bars for calls */}
-              <Bar
-                yAxisId="left"
-                dataKey="calls"
-                fill="#69BA6C"
-                radius={[0, 0, 0, 0]}
-                barSize={barSize}
-                shape={(props) => {
-                  const { x, y, width, height, fill } = props;
-                  const minHeight = 4;
-                  const adjustedHeight = height > 0 ? height : minHeight;
-                  const adjustedY = height > 0 ? y : y - minHeight;
-                  return (
-                    <rect
-                      x={x}
-                      y={adjustedY}
-                      width={width}
-                      height={adjustedHeight}
-                      fill={fill}
-                      rx={4}
-                      ry={4}
-                    />
-                  );
-                }}
-              >
-                <LabelList
-                  dataKey="earnings"
-                  position="top"
-                  formatter={(value) => value < 1000 ? `$${Math.round(value)}` : `$${(value / 1000).toFixed(1)}k`}
-                  style={{
-                    fill: "#000000B2",
-                    fontSize: 11,
-                    fontWeight: 500,
-                  }}
-                />
-              </Bar>
-
-              {/* Line for earnings */}
-              <Line 
-                yAxisId="left"
-                type="natural"
-                dataKey="calls" 
-                stroke="#0078BD"
-                strokeWidth={1.5}
-                dot={renderDot}
-                label={renderEarningsLabel}
-                activeDot={{ r: 5, fill: '#3B82F6', stroke: '#FFFFFF', strokeWidth: 3 }}
-                animationDuration={1000}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        )}
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-700 dark:text-gray-300">
+                    {client.totalCalls.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-center text-gray-700 dark:text-white">
+                    ${client.totalEarnings.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 text-center font-bold text-black dark:text-white">
+                    {totalCalls > 0 ? ((client.totalCalls / totalCalls) * 100).toFixed(1) : 0}%
+                  </td>
+                  {/* <td className="px-6 py-4 text-center font-bold text-black dark:text-white">
+                    {totalEarnings > 0 ? ((client.totalEarnings / totalEarnings) * 100).toFixed(1) : 0}%
+                  </td> */}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
 };
 
-export default CallGraph;
+export default ClientActivityGraph;
