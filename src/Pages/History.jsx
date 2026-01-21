@@ -129,7 +129,7 @@ const History = () => {
       rem: "REMS",
       rpm: "RPM",
       pr1: "PR1",
-      total: "Total",
+      total: "Percentage Earning", // Changed header label
       date: "Date",
     };
     return labels[key] || key;
@@ -290,6 +290,15 @@ const History = () => {
             const recordDate = record.date || record.createdAt;
             const parsedDate = recordDate ? new Date(recordDate) : null;
             const validDate = isValidDate(parsedDate) ? recordDate : null;
+            
+            // Calculate total earnings from services
+            const totalEarnings = record.servicesUsed?.reduce((sum, service) => {
+              return sum + (Number(service.total) || 0);
+            }, 0) || 0;
+            
+            // FIXED: Use the percentageEarning from the API response instead of calculating it
+            const percentageEarning = record.percentageEarning ? Number(record.percentageEarning).toFixed(2) : "0.00";
+            
             return {
               _id: record._id,
               call: record.phoneNumber || "-",
@@ -297,37 +306,59 @@ const History = () => {
               clientId: record.clientId || record.client?._id || null,
               // Check if record was imported from Excel
               isImported: record.importedFromExcel || false,
-              percentageEarning: record.percentageEarning ? Number(record.percentageEarning).toFixed(2) : "0.00",
-              totalEarnings: record.totalEarnings ? Number(record.totalEarnings).toFixed(2) : "0.00",
+              totalEarnings: totalEarnings.toFixed(2),
+              percentageEarning: percentageEarning,
               services: record.servicesUsed?.length > 0
-                ? record.servicesUsed
-                    .filter((s) => {
-                      const name = s.name?.trim().toUpperCase();
-                      return !["REMS:KMS ENROUTE", "RPM:KMS UNDER TOW", "PR1:WAITING TIME"]
-                        .map((n) => n.toUpperCase())
-                        .includes(name);
-                    })
-                    .map((s) => ({
-                      name: s.name || "Unknown Service",
-                      id: s._id || s.serviceId || s.id || null,
-                    }))
-                : [{ name: "No Service", id: null }],
-              rpm: record.servicesUsed?.find(
-                (s) => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW"
-              )?.unitQuantity
-                ? Number(record.servicesUsed.find((s) => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW").unitQuantity).toFixed(2)
-                : "0.00",
-              rem: record.servicesUsed?.find(
-                (s) => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE"
-              )?.unitQuantity
-                ? Number(record.servicesUsed.find((s) => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE").unitQuantity).toFixed(2)
-                : "0.00",
-              pr1: record.servicesUsed?.find(
-                (s) => s.name?.trim().toUpperCase() === "PR1:WAITING TIME"
-              )?.unitQuantity
-                ? Number(record.servicesUsed.find((s) => s.name?.trim().toUpperCase() === "PR1:WAITING TIME").unitQuantity).toFixed(2)
-                : "0.00",
-              total: record.percentageEarning ? Number(record.percentageEarning).toFixed(2) : "0.00",
+  ? record.servicesUsed
+      .filter((s) => {
+        const name = s.name?.trim().toUpperCase() || "";
+
+        // Agar Excel se imported hai to REMS, RPM, PR1 ko services list se nikaal do
+        if (record.importedFromExcel) {
+          return !["REMS", "RPMS", "PR1"].includes(name);
+        }
+
+        // Normal calls ke liye purana logic
+        return !["REMS:KMS ENROUTE", "RPM:KMS UNDER TOW", "PR1:WAITING TIME"]
+          .map(n => n.toUpperCase())
+          .includes(name);
+      })
+      .map((s) => ({
+        name: s.name || "Unknown Service",
+        id: s._id || s.serviceId || s.id || null,
+      }))
+  : [{ name: "No Service", id: null }],
+             rem: (() => {
+  const s = record.servicesUsed?.find(s => {
+    const n = s.name?.trim().toUpperCase() || "";
+    return record.importedFromExcel 
+      ? n === "REMS" 
+      : n.includes("REMS");
+  });
+  return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+})(),
+
+rpm: (() => {
+  const s = record.servicesUsed?.find(s => {
+    const n = s.name?.trim().toUpperCase() || "";
+    return record.importedFromExcel 
+      ? n === "RPMS"   // ← note: Excel mein RPMS likha hota hai (S ke saath)
+      : n.includes("RPM");
+  });
+  return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+})(),
+
+pr1: (() => {
+  const s = record.servicesUsed?.find(s => {
+    const n = s.name?.trim().toUpperCase() || "";
+    return record.importedFromExcel 
+      ? n === "PR1" 
+      : n.includes("PR1");
+  });
+  return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+})(),
+              // FIXED: Use the percentageEarning from the API response instead of calculating it
+              total: percentageEarning,
               date: validDate,
               createdAt: record.createdAt,
               status: record.status || (Math.random() > 0.5 ? "Approved" : "Pending"),
@@ -592,6 +623,25 @@ const History = () => {
           </div>
         );
       case "services":
+  return (
+    <div className="flex gap-2 flex-wrap min-h-[28px] items-center">
+      {record.services && record.services.length > 0 ? (
+        record.services.map((service, sIdx) => (
+          <span
+            key={sIdx}
+            className="border rounded-full dark:text-[#CECFD3] px-2.5 py-0.5 text-sm cursor-pointer hover:text-[#0078bd] dark:border-gray-600"
+            onClick={() => handleServiceClick(record, service.name)}
+          >
+            {service.name}
+          </span>
+        ))
+      ) : (
+        <span className="text-gray-400 dark:text-gray-500 italic text-sm">
+          -
+        </span>
+      )}
+    </div>
+  );
         return (
           <div className="flex gap-2 flex-wrap">
             {record.services.map((service, sIdx) => (
@@ -605,37 +655,39 @@ const History = () => {
             ))}
           </div>
         );
-      case "rem":
-        return (
-          <span
-            className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd]"
-            onClick={() => handleServiceClick(record, "REMS:KMS ENROUTE")}
-          >
-            {formatValue(record.rem)}
-          </span>
-        );
-      case "rpm":
-        return (
-          <span
-            className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd]"
-            onClick={() => handleServiceClick(record, "RPM:KMS UNDER TOW")}
-          >
-            {formatValue(record.rpm)}
-          </span>
-        );
-      case "pr1":
-        return (
-          <span
-            className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd]"
-            onClick={() => handleServiceClick(record, "PR1:WAITING TIME")}
-          >
-            {formatValue(record.pr1)}
-          </span>
-        );
+case "rem":
+  return (
+    <span
+      className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd] font-medium"
+      onClick={() => handleServiceClick(record, record.importedFromExcel ? "REMS" : "REMS:KMS ENROUTE")}
+    >
+      {formatValue(record.rem)}
+    </span>
+  );
+
+case "rpm":
+  return (
+    <span
+      className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd] font-medium"
+      onClick={() => handleServiceClick(record, record.importedFromExcel ? "RPMS" : "RPM:KMS UNDER TOW")}
+    >
+      {formatValue(record.rpm)}
+    </span>
+  );
+
+case "pr1":
+  return (
+    <span
+      className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd] font-medium"
+      onClick={() => handleServiceClick(record, record.importedFromExcel ? "PR1" : "PR1:WAITING TIME")}
+    >
+      {formatValue(record.pr1)}
+    </span>
+  );
       case "total":
         return (
           <span
-            className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd]"
+            className="dark:text-[#CECFD3] cursor-pointer hover:text-[#0078bd] font-medium"
             onClick={() => handleTotalClick(record)}
           >
             ${formatValue(record.total)}
@@ -1004,7 +1056,7 @@ const History = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <p className="text-[12px] robotomedium text-[#67778E99] dark:text-gray-400">Total</p>
+                      <p className="text-[12px] robotomedium text-[#67778E99] dark:text-gray-400">Percentage Earning</p>
                       <p
                         onClick={() => handleTotalClick(record)}
                         className="text-[14px] robotobold text-[#2AAC5A] cursor-pointer hover:underline dark:text-green-400"

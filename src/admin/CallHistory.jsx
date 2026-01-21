@@ -5,7 +5,6 @@ import { Baseurl } from "../Config";
 import EditCallModal from "./EditCallModal";
 import { CiEdit } from "react-icons/ci";
 import { BiEditAlt } from "react-icons/bi";
-
 // DATE PICKER COMPONENT
 const DateRangePicker = ({
   fromDate,
@@ -19,7 +18,6 @@ const DateRangePicker = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const datePickerRef = useRef(null);
-
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
@@ -29,14 +27,12 @@ const DateRangePicker = ({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
   const formatLocalDate = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
-
   const formatDisplayDate = (dateStr) => {
     if (!dateStr) return "N/A";
     const [y, m, d] = dateStr.split("-");
@@ -47,13 +43,11 @@ const DateRangePicker = ({
       year: "numeric",
     });
   };
-
   const getDateRangeText = () => {
     if (!fromDate) return "Select Range";
     if (!toDate) return `${formatDisplayDate(fromDate)} - Select End`;
     return `${formatDisplayDate(fromDate)} - ${formatDisplayDate(toDate)}`;
   };
-
   const handleDateSelect = (dateStr) => {
     if (!fromDate || (fromDate && toDate)) {
       onFromDateChange(dateStr);
@@ -65,7 +59,6 @@ const DateRangePicker = ({
       onToDateChange(finalTo);
     }
   };
-
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -80,7 +73,6 @@ const DateRangePicker = ({
     }
     return days;
   };
-
   const handlePrevMonth = () =>
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const handleNextMonth = () =>
@@ -90,23 +82,19 @@ const DateRangePicker = ({
     setSelectedYear(y);
     setCurrentDate(new Date(y, currentDate.getMonth(), 1));
   };
-
   const generateYearOptions = () => {
     const current = new Date().getFullYear();
     return Array.from({ length: 6 }, (_, i) => current - i);
   };
-
   const isDateInRange = (date) => {
     if (!fromDate || !toDate) return false;
     const d = formatLocalDate(date);
     return d >= fromDate && d <= toDate;
   };
-
   const isDateSelected = (date) => {
     const d = formatLocalDate(date);
     return d === fromDate || d === toDate;
   };
-
   return (
     <div className="relative" ref={datePickerRef}>
       <div
@@ -116,7 +104,6 @@ const DateRangePicker = ({
         <span className="text-sm font-medium">{getDateRangeText()}</span>
         <FaChevronDown className="text-gray-500" />
       </div>
-
       {showDatePicker && (
         <div className="absolute top-full mt-2 left-0 bg-white dark:bg-gray-800 border rounded-lg shadow-xl p-4 z-50 w-80">
           <div className="mb-4">
@@ -158,7 +145,6 @@ const DateRangePicker = ({
               </span>
             </div>
           </div>
-
           <div className="grid grid-cols-7 gap-1 text-xs">
             {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
               <div key={d} className="text-center font-medium text-gray-500 py-1 text-xs dark:text-gray-400">
@@ -171,7 +157,6 @@ const DateRangePicker = ({
               const isSelected = isDateSelected(date);
               const isInRange = isDateInRange(date);
               const dateStr = formatLocalDate(date);
-
               return (
                 <button
                   key={i}
@@ -189,7 +174,6 @@ const DateRangePicker = ({
               );
             })}
           </div>
-
           <div className="flex justify-between items-center pt-2 border-t mt-2 text-xs dark:border-gray-700">
             <button onClick={onClearDates} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
               Clear
@@ -209,7 +193,6 @@ const DateRangePicker = ({
     </div>
   );
 };
-
 const CallHistory = () => {
   const { driverId } = useParams();
   const [allCalls, setAllCalls] = useState([]);
@@ -218,40 +201,35 @@ const CallHistory = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
   // State for actual filter dates sent to API
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
   // Temporary state for new DateRangePicker component
   const [tempFromDate, setTempFromDate] = useState(null);
   const [tempToDate, setTempToDate] = useState(null);
-
   // Selection & Delete
   const [selectedCalls, setSelectedCalls] = useState([]);
   const [selectAll, setSelectAll] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  
+ 
   // Add near showEditModal, showDeleteModal etc.
   const [showCommentModal, setShowCommentModal] = useState(false);
   const [selectedCommentText, setSelectedCommentText] = useState("");
-  
+ 
   // Modals
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedCallForEdit, setSelectedCallForEdit] = useState(null);
   const [currentEditIndex, setCurrentEditIndex] = useState(-1);
-  
+ 
   // Client Modal
   const [showClientModal, setShowClientModal] = useState(false);
   const [selectedClientRecord, setSelectedClientRecord] = useState(null);
   const [selectedServiceName, setSelectedServiceName] = useState(null);
-
   // Search & Tabs
   const [searchQuery, setSearchQuery] = useState("");
   const [showStatusDropdown, setShowStatusDropdown] = useState(null);
   const [activeTab, setActiveTab] = useState("All");
-
   // DRAG AND DROP STATE
   const defaultColumnOrder = [
     "checkbox",
@@ -271,7 +249,6 @@ const CallHistory = () => {
     "status",
     "action",
   ];
-
   const [columnOrder, setColumnOrder] = useState(() => {
     const savedOrder = localStorage.getItem("driverTableColumnOrder");
     if (savedOrder) {
@@ -285,7 +262,6 @@ const CallHistory = () => {
     }
     return defaultColumnOrder;
   });
-
   // ── NEW STATE: Column Visibility ──────────────────────────────
   const [showColumnVisibilityModal, setShowColumnVisibilityModal] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -333,35 +309,28 @@ const CallHistory = () => {
       action: true,
     };
   });
-
   useEffect(() => {
     localStorage.setItem("driverTableColumnOrder", JSON.stringify(columnOrder));
   }, [columnOrder]);
-
   useEffect(() => {
     localStorage.setItem("driverTableColumnVisibility", JSON.stringify(visibleColumns));
   }, [visibleColumns]);
-
   const onDragStart = (e, index) => {
     e.dataTransfer.setData("columnIndex", index);
     e.target.style.opacity = "0.4";
   };
-
   const onDragOver = (e) => e.preventDefault();
   const onDragEnter = (e) => e.preventDefault();
-
   const onDrop = (e, dropIndex) => {
     e.preventDefault();
     const dragIndex = Number(e.dataTransfer.getData("columnIndex"));
     if (dragIndex === dropIndex) return;
-
     const newOrder = [...columnOrder];
     const draggedItem = newOrder[dragIndex];
     newOrder.splice(dragIndex, 1);
     newOrder.splice(dropIndex, 0, draggedItem);
     setColumnOrder(newOrder);
   };
-
   // ── Column Visibility Handlers ──────────────────────────────
   const handleColumnVisibilityChange = (column) => {
     setVisibleColumns((prev) => ({
@@ -369,7 +338,6 @@ const CallHistory = () => {
       [column]: !prev[column],
     }));
   };
-
   const handleSelectAllColumns = () => {
     const allVisible = Object.values(visibleColumns).every((v) => v);
     if (allVisible) {
@@ -413,7 +381,6 @@ const CallHistory = () => {
     }
   };
   // ─────────────────────────────────────────────────────────────────────
-
   const getHeaderLabel = (key) => {
     const labels = {
       checkbox: "",
@@ -435,7 +402,6 @@ const CallHistory = () => {
     };
     return labels[key] || key;
   };
-
   const getDisplayStatus = (status) => {
     if (!status) return "Unverified";
     const lower = status.toLowerCase();
@@ -443,13 +409,11 @@ const CallHistory = () => {
     if (lower === "verified") return "Verified";
     return "Unverified";
   };
-
   const getCurrentCycle = () => {
     const today = new Date();
     const day = today.getDate();
     const year = today.getFullYear();
     const month = today.getMonth();
-
     let start, end;
     if (day <= 15) {
       start = new Date(year, month, 1);
@@ -458,13 +422,10 @@ const CallHistory = () => {
       start = new Date(year, month, 16);
       end = new Date(year, month + 1, 0);
     }
-
     const format = (d) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
     return { from: format(start), to: format(end) };
   };
-
   useEffect(() => {
     const { from, to } = getCurrentCycle();
     setFromDate(from);
@@ -472,7 +433,6 @@ const CallHistory = () => {
     setTempFromDate(from);
     setTempToDate(to);
   }, []);
-
   const resetToCurrentCycle = () => {
     const { from, to } = getCurrentCycle();
     setFromDate(from);
@@ -480,7 +440,6 @@ const CallHistory = () => {
     setTempFromDate(from);
     setTempToDate(to);
   };
-
   const applyDateFilter = () => {
     if (tempFromDate) {
       const start = tempFromDate;
@@ -489,26 +448,21 @@ const CallHistory = () => {
       setToDate(end);
     }
   };
-
   const handleShowComment = (comment) => {
     setSelectedCommentText(comment === "-" ? "" : comment);
     setShowCommentModal(true);
   };
-
   const handleServiceClick = (record, serviceName) => {
     setSelectedClientRecord(record);
     setSelectedServiceName(serviceName);
     setShowClientModal(true);
   };
-
   const handleTotalClick = (record) => {
     setSelectedClientRecord(record);
     setSelectedServiceName(null);
     setShowClientModal(true);
   };
-
   const formatValue = (v) => (v === "0.00" || v == null ? "-" : Number(v).toFixed(2));
-
   const filteredCalls = useMemo(() => {
     let filtered = [...allCalls];
     if (searchQuery.trim()) {
@@ -528,7 +482,6 @@ const CallHistory = () => {
     }
     return filtered;
   }, [allCalls, searchQuery, activeTab]);
-
   const counts = useMemo(() => ({
     all: allCalls.length,
     verified: allCalls.filter((c) => c.status.toLowerCase() === "verified").length,
@@ -536,7 +489,6 @@ const CallHistory = () => {
       ["unverified", "pending"].includes(c.status.toLowerCase())
     ).length,
   }), [allCalls]);
-
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleDateString("en-US", {
@@ -545,7 +497,6 @@ const CallHistory = () => {
       year: "numeric",
     });
   };
-
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     if (!token) {
@@ -553,20 +504,17 @@ const CallHistory = () => {
       setLoading(false);
       return;
     }
-
     let url = `${Baseurl}/admin/calls-for-driver-by/${driverId}`;
     const params = new URLSearchParams();
     if (fromDate) params.append("startDate", fromDate);
-    
+   
     if (toDate) {
       const nextDay = new Date(toDate);
       nextDay.setDate(nextDay.getDate() + 1);
       const endParam = nextDay.toISOString().split("T")[0];
       params.append("endDate", endParam);
     }
-
     if (params.toString()) url += `?${params.toString()}`;
-
     fetch(url, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -576,18 +524,16 @@ const CallHistory = () => {
       .then((res) => res.json())
       .then((data) => {
         if (!data.calls) throw new Error("No calls data");
-
         const formatted = data.calls.map((call) => {
           const adminEdits = call.adminEdits || {};
           const servicesUsed = adminEdits.servicesUsed || call.servicesUsed || [];
           const totalEarnings = adminEdits.totalEarnings ?? call.totalEarnings ?? 0;
-          
+         
           const vehicle = call.vehicle || {};
           const commentsList = call.comments || [];
-          const commentsString = commentsList.length > 0 
-            ? commentsList.map(c => c.note).join(", ") 
+          const commentsString = commentsList.length > 0
+            ? commentsList.map(c => c.note).join(", ")
             : "-";
-
           // Client Name Extraction - Handle both imported and regular calls
           let clientName = "-";
           if (call.importMeta?.excelClient) {
@@ -597,7 +543,6 @@ const CallHistory = () => {
             // For regular calls, use clientId.name
             clientName = call.clientId.name;
           }
-
           return {
             _id: call._id,
             call: adminEdits.phoneNumber || call.phoneNumber || "-",
@@ -607,29 +552,54 @@ const CallHistory = () => {
             status: call.status || "Pending",
             importedFromExcel: call.importedFromExcel || false,
             importMeta: call.importMeta || null,
-
-            services: servicesUsed
-              .filter((s) => {
-                const n = s.name?.trim().toUpperCase();
-                return !["REMS:KMS ENROUTE", "RPM:KMS UNDER TOW", "PR1:WAITING TIME"].includes(n);
-              })
-              .map((s) => ({
-                name: s.name || "Unknown",
-                id: s._id || s.serviceId,
-              })),
-
-            rem: servicesUsed.find((s) => s.name?.includes("REMS"))?.unitQuantity || "0.00",
-            rpm: servicesUsed.find((s) => s.name?.includes("RPM"))?.unitQuantity || "0.00",
-            pr1: servicesUsed.find((s) => s.name?.includes("PR1"))?.unitQuantity || "0.00",
+           services: servicesUsed
+  .filter((s) => {
+    const n = s.name?.trim().toUpperCase();
+    // For imported calls, exclude REMS, RPMS, and PR1 from services display
+    if (call.importedFromExcel) {
+      return !["REMS", "RPMS", "PR1"].includes(n);
+    }
+    // For regular calls, exclude the full service names
+    return !["REMS:KMS ENROUTE", "RPM:KMS UNDER TOW", "PR1:WAITING TIME"].includes(n);
+  })
+  .map((s) => ({
+    name: s.name || "Unknown",
+    id: s._id || s.serviceId,
+  })),
+            rem: servicesUsed.find((s) => {
+              const n = s.name?.trim().toUpperCase();
+              // For imported calls, match just "REMS"
+              if (call.importedFromExcel) {
+                return n === "REMS";
+              }
+              // For regular calls, match the full service name
+              return n.includes("REMS");
+            })?.unitQuantity || "0.00",
+          rpm: servicesUsed.find((s) => {
+  const n = s.name?.trim().toUpperCase();
+  // For imported calls, match "RPMS" instead of "RPM"
+  if (call.importedFromExcel) {
+    return n === "RPMS";
+  }
+  // For regular calls, match the full service name
+  return n.includes("RPM");
+})?.unitQuantity || "0.00",
+            pr1: servicesUsed.find((s) => {
+              const n = s.name?.trim().toUpperCase();
+              // For imported calls, match just "PR1"
+              if (call.importedFromExcel) {
+                return n === "PR1";
+              }
+              // For regular calls, match the full service name
+              return n.includes("PR1");
+            })?.unitQuantity || "0.00",
             total: Number(totalEarnings).toFixed(2),
-
             // Vehicle Data
             vehicleYear: vehicle.year || "-",
             vehicleMake: vehicle.make || "-",
             vehicleModel: vehicle.model || "-",
             vehicleVin: vehicle.vin || "-",
             comments: commentsString,
-
             servicesUsed: servicesUsed.map((s) => ({
               ...s,
               baseRate: Number(s.baseRate || 0).toFixed(2),
@@ -639,7 +609,6 @@ const CallHistory = () => {
             })),
           };
         });
-
         setAllCalls(formatted);
         setCalls(formatted);
         setDriver(data.driver || null);
@@ -650,7 +619,6 @@ const CallHistory = () => {
         setLoading(false);
       });
   }, [driverId, fromDate, toDate]);
-
   const handleCallUpdate = (updatedCall) => {
     setAllCalls((prev) =>
       prev.map((c) =>
@@ -668,41 +636,36 @@ const CallHistory = () => {
                 unitQuantity: Number(s.unitQuantity || 0).toFixed(2),
               })),
               rem: updatedCall.adminEdits?.servicesUsed?.find((s) => s.name?.includes("REMS"))?.unitQuantity || "0.00",
-              rpm: updatedCall.adminEdits?.servicesUsed?.find((s) => s.name?.includes("RPM"))?.unitQuantity || "0.00",
+             rpm: updatedCall.adminEdits?.servicesUsed?.find((s) => s.name?.includes("RPMS") || s.name?.includes("RPM"))?.unitQuantity || "0.00",
               pr1: updatedCall.adminEdits?.servicesUsed?.find((s) => s.name?.includes("PR1"))?.unitQuantity || "0.00",
             }
           : c
       )
     );
   };
-
   const handleEditClick = (call) => {
     const index = filteredCalls.findIndex((c) => c._id === call._id);
     setCurrentEditIndex(index);
     setSelectedCallForEdit(call);
     setShowEditModal(true);
   };
-
   const handlePrevCall = () => {
     if (currentEditIndex > 0) {
       setCurrentEditIndex(currentEditIndex - 1);
       setSelectedCallForEdit(filteredCalls[currentEditIndex - 1]);
     }
   };
-
   const handleNextCall = () => {
     if (currentEditIndex < filteredCalls.length - 1) {
       setCurrentEditIndex(currentEditIndex + 1);
       setSelectedCallForEdit(filteredCalls[currentEditIndex + 1]);
     }
   };
-
   const handleCloseEdit = () => {
     setShowEditModal(false);
     setSelectedCallForEdit(null);
     setCurrentEditIndex(-1);
   };
-
   const handleUpdateStatus = async (callId, newStatus) => {
     const token = localStorage.getItem("authToken");
     try {
@@ -724,13 +687,11 @@ const CallHistory = () => {
       setShowStatusDropdown(null);
     }
   };
-
   const handleSelectCall = (id) => {
     setSelectedCalls((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
-
   const handleSelectAll = () => {
     if (selectAll) {
       setSelectedCalls([]);
@@ -739,12 +700,10 @@ const CallHistory = () => {
     }
     setSelectAll(!selectAll);
   };
-
   const handleCancelSelection = () => {
     setSelectedCalls([]);
     setSelectAll(false);
   };
-
   const handleDelete = async () => {
     setDeleteLoading(true);
     const token = localStorage.getItem("authToken");
@@ -767,7 +726,6 @@ const CallHistory = () => {
       setDeleteLoading(false);
     }
   };
-
   useEffect(() => {
     const handler = (e) => {
       if (!e.target.closest(".status-dropdown")) {
@@ -777,12 +735,10 @@ const CallHistory = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
-
   // Cell Content Renderer
   const renderCellContent = (columnKey, call) => {
     // Skip rendering if column is not visible
     if (!visibleColumns[columnKey]) return null;
-
     switch (columnKey) {
       case "checkbox":
         return (
@@ -808,25 +764,31 @@ const CallHistory = () => {
             )}
           </span>
         );
-      case "services":
-        return (
-          <div className="flex flex-wrap gap-2 max-w-xs">
-            {call.services.map((s, i) => (
-              <span
-                key={i}
-                onClick={() => handleServiceClick(call, s.name)}
-                className="inline-block border dark:text-white border-gray-300 dark:border-gray-600 rounded-full px-3 py-1 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
-              >
-                {s.name}
-              </span>
-            ))}
-          </div>
-        );
+     case "services":
+  return (
+    <div className="flex flex-wrap gap-2 max-w-xs">
+      {call.services && call.services.length > 0 ? (
+        call.services.map((s, i) => (
+          <span
+            key={i}
+            onClick={() => handleServiceClick(call, s.name)}
+            className="inline-block border dark:text-white border-gray-300 dark:border-gray-600 rounded-full px-3 py-1 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
+          >
+            {s.name}
+          </span>
+        ))
+      ) : (
+        <span className="text-gray-400 dark:text-gray-500 italic text-sm">
+          -
+        </span>
+      )}
+    </div>
+  );
       case "rem":
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "REMS" : "REMS:KMS ENROUTE")}
           >
             {formatValue(call.rem)}
           </span>
@@ -835,7 +797,7 @@ const CallHistory = () => {
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "RPM" : "RPM:KMS UNDER TOW")}
           >
             {formatValue(call.rpm)}
           </span>
@@ -844,7 +806,7 @@ const CallHistory = () => {
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "PR1" : "PR1:WAITING TIME")}
           >
             {formatValue(call.pr1)}
           </span>
@@ -927,7 +889,6 @@ const CallHistory = () => {
         return null;
     }
   };
-
   if (loading) {
     return (
       <div className="p-4 sm:p-6 bg-white dark:bg-[#101935] min-h-screen">
@@ -974,9 +935,7 @@ const CallHistory = () => {
       </div>
     );
   }
-
   if (error) return <div className="p-10 text-center text-red-500 text-xl">{error}</div>;
-
   return (
     <div className="border border-[#F7F7F7] dark:border-[#263463] p-0 sm:p-6">
       {/* Delete Bar */}
@@ -1002,12 +961,11 @@ const CallHistory = () => {
           </div>
         </div>
       )}
-
       <div className="flex flex-col px-4 py-2 bg-white dark:bg-[#101935]">
         <h2 className="robotomedium text-[20px] mb-4 text-gray-900 dark:text-white">
           Call History {driver ? `- ${driver.name}` : ""}
         </h2>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between py-5  md:gap-0">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between py-5 md:gap-0">
           <div className="flex gap-4 mb-4">
             <button
               onClick={() => {
@@ -1025,7 +983,7 @@ const CallHistory = () => {
               onClick={() => {
                 setActiveTab("Verified");
               }}
-              className={`text-[16px] robotomedium  pb-2 cursor-pointer ${
+              className={`text-[16px] robotomedium pb-2 cursor-pointer ${
                 activeTab === "Verified"
                   ? "text-[#18CC6C] border-b-2 border-[#18CC6C]"
                   : "text-[#18CC6C] hover:text-[#16a34a]"
@@ -1046,11 +1004,10 @@ const CallHistory = () => {
               Unverified ({counts.unverified})
             </button>
           </div>
-
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto ">
             <button
               onClick={() => setShowColumnVisibilityModal(true)}
-              className="bg-blue-500 text-white px-2 w-full  py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
+              className="bg-blue-500 text-white px-2 w-full py-2 rounded-lg hover:bg-blue-600 flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -1058,7 +1015,7 @@ const CallHistory = () => {
               </svg>
               Column Visibility
             </button>
-            
+           
             <div className="relative w-full md:min-w-[250px] ">
               <DateRangePicker
                 fromDate={tempFromDate}
@@ -1069,7 +1026,6 @@ const CallHistory = () => {
                 onApplyDates={applyDateFilter}
               />
             </div>
-
             <div className="flex items-center gap-0">
               <div className="relative">
                 <input
@@ -1105,7 +1061,6 @@ const CallHistory = () => {
           </div>
         </div>
       </div>
-
       {/* Mobile View */}
       <div className="md:hidden space-y-4 px-0 pb-4">
         {filteredCalls.length === 0 ? (
@@ -1187,28 +1142,34 @@ const CallHistory = () => {
               <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-3">
                 Call No: {call.call}
               </p>
-              <div className="mb-3">
-                <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-2">
-                  Services
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {call.services.map((s, i) => (
-                    <span
-                      key={i}
-                      className="robotomedium text-[#67778E] dark:text-gray-400 bg-[#67778E0A] dark:bg-gray-800 rounded-full px-3 py-1 text-[12px] cursor-pointer hover:text-blue-600"
-                      onClick={() => handleServiceClick(call, s.name)}
-                    >
-                      {s.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
+            <div className="mb-3">
+  <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-2">
+    Services
+  </p>
+  <div className="flex flex-wrap gap-2">
+    {call.services && call.services.length > 0 ? (
+      call.services.map((s, i) => (
+        <span
+          key={i}
+          className="robotomedium text-[#67778E] dark:text-gray-400 bg-[#67778E0A] dark:bg-gray-800 rounded-full px-3 py-1 text-[12px] cursor-pointer hover:text-blue-600"
+          onClick={() => handleServiceClick(call, s.name)}
+        >
+          {s.name}
+        </span>
+      ))
+    ) : (
+      <span className="text-gray-500 dark:text-gray-600 text-[13px] italic">
+        -
+      </span>
+    )}
+  </div>
+</div>
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div className="flex flex-col items-start">
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">REMS</p>
                   <p
                     className="text-[14px] robotomedium cursor-pointer dark:text-gray-400 hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "REMS" : "REMS:KMS ENROUTE")}
                   >
                     {formatValue(call.rem)}
                   </p>
@@ -1217,7 +1178,7 @@ const CallHistory = () => {
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">RPM</p>
                   <p
                     className="text-[14px] robotomedium dark:text-gray-400 cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "RPM" : "RPM:KMS UNDER TOW")}
                   >
                     {formatValue(call.rpm)}
                   </p>
@@ -1226,7 +1187,7 @@ const CallHistory = () => {
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">PR1</p>
                   <p
                     className="text-[14px] robotomedium dark:text-gray-400 cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "PR1" : "PR1:WAITING TIME")}
                   >
                     {formatValue(call.pr1)}
                   </p>
@@ -1241,7 +1202,7 @@ const CallHistory = () => {
                   </p>
                 </div>
               </div>
-              
+             
               {/* NEW MOBILE SECTION: Vehicle Details */}
               <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mt-3">
                  <div className="grid grid-cols-2 gap-2 mb-2">
@@ -1283,7 +1244,6 @@ const CallHistory = () => {
           ))
         )}
       </div>
-
       {/* Desktop Table with Drag and Drop */}
       <div className="hidden md:block overflow-x-auto -mx-4 px-4">
         <div className="inline-block min-w-full align-middle">
@@ -1346,7 +1306,6 @@ const CallHistory = () => {
           </table>
         </div>
       </div>
-
       {showEditModal && selectedCallForEdit && (
         <EditCallModal
           call={selectedCallForEdit}
@@ -1361,10 +1320,9 @@ const CallHistory = () => {
           hasNext={currentEditIndex < filteredCalls.length - 1}
         />
       )}
-
       {showClientModal && selectedClientRecord && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50 p-4">
-          <div 
+          <div
             className="bg-white dark:bg-[#101935] rounded-lg p-6 shadow-xl w-[500px] max-w-[90vw] max-h-[90vh] overflow-y-auto border border-gray-300 dark:border-gray-700"
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -1494,11 +1452,10 @@ const CallHistory = () => {
           </div>
         </div>
       )}
-
       {showCommentModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4">
           <div className="bg-white dark:bg-[#101935] rounded-lg p-6 shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto border border-gray-300 dark:border-gray-700 relative">
-            
+           
             <div className="flex justify-between items-center mb-5">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                 Call Comment
@@ -1510,11 +1467,9 @@ const CallHistory = () => {
                 ×
               </button>
             </div>
-
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded border border-gray-200 dark:border-gray-700 whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
               {selectedCommentText || "No comment available"}
             </div>
-
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowCommentModal(false)}
@@ -1526,10 +1481,9 @@ const CallHistory = () => {
           </div>
         </div>
       )}
-
       {showDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 p-4 z-50">
-          <div 
+          <div
             className="bg-white dark:bg-[#101935] rounded-lg p-4 sm:p-6 shadow-lg w-full max-w-[400px] border border-gray-300 dark:border-gray-700 delete-modal"
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -1557,10 +1511,9 @@ const CallHistory = () => {
           </div>
         </div>
       )}
-
       {showColumnVisibilityModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-[#00000065] bg-opacity-50 z-50">
-          <div 
+          <div
             className="column-visibility-modal bg-white dark:bg-[#101935] rounded-lg p-6 shadow-lg w-[400px] dark:shadow-gray-800/50"
             onMouseDown={(e) => e.stopPropagation()}
           >
@@ -1622,5 +1575,4 @@ const CallHistory = () => {
     </div>
   );
 };
-
 export default CallHistory;

@@ -620,6 +620,9 @@ const CallRecorded = () => {
           clientName = call.clientId.name;
         }
 
+        // Check if record was imported from Excel
+        const isImported = call.importedFromExcel || false;
+
         return {
           _id: call._id,
           driverCaaId: call.driverId?.caaDriverId || "-",
@@ -628,52 +631,69 @@ const CallRecorded = () => {
           call: call.adminEdits.phoneNumber || call.phoneNumber || "-",
           clientName: clientName,
           clientId: call.clientId?._id || null,
-          importedFromExcel: call.importedFromExcel || false,
+          importedFromExcel: isImported,
           importMeta: call.importMeta || null,
 
           services: servicesUsed
             .filter((s) => {
               const n = s.name?.trim().toUpperCase();
-              return ![
-                "REMS:KMS ENROUTE",
-                "RPM:KMS UNDER TOW",
-                "PR1:WAITING TIME",
-              ].includes(n);
+              
+              // Different filtering logic for imported vs regular calls
+              if (isImported) {
+                // For imported calls, filter out REMS, RPMS, PR1 from services list
+                return !["REMS", "RPMS", "PR1"].includes(n);
+              } else {
+                // For regular calls, filter out the full service names
+                return ![
+                  "REMS:KMS ENROUTE",
+                  "RPM:KMS UNDER TOW",
+                  "PR1:WAITING TIME",
+                ].includes(n);
+              }
             })
             .map((s) => ({
               name: s.name || "Unknown Service",
               id: s._id || s.serviceId || null,
             })),
 
-          rem: servicesUsed
-            .find((s) => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE")
-            ?.unitQuantity
-            ? Number(
-                servicesUsed.find(
-                  (s) => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE"
-                ).unitQuantity
-              ).toFixed(2)
-            : "0.00",
+          // Different extraction logic for REMS based on import status
+          rem: (() => {
+            if (isImported) {
+              // For imported calls, look for "REMS"
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "REMS");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            } else {
+              // For regular calls, look for "REMS:KMS ENROUTE"
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            }
+          })(),
 
-          rpm: servicesUsed
-            .find((s) => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW")
-            ?.unitQuantity
-            ? Number(
-                servicesUsed.find(
-                  (s) => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW"
-                ).unitQuantity
-              ).toFixed(2)
-            : "0.00",
+          // Different extraction logic for RPM based on import status
+          rpm: (() => {
+            if (isImported) {
+              // For imported calls, look for "RPMS" (note: S at the end)
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "RPMS");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            } else {
+              // For regular calls, look for "RPM:KMS UNDER TOW"
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            }
+          })(),
 
-          pr1: servicesUsed
-            .find((s) => s.name?.trim().toUpperCase() === "PR1:WAITING TIME")
-            ?.unitQuantity
-            ? Number(
-                servicesUsed.find(
-                  (s) => s.name?.trim().toUpperCase() === "PR1:WAITING TIME"
-                ).unitQuantity
-              ).toFixed(2)
-            : "0.00",
+          // Different extraction logic for PR1 based on import status
+          pr1: (() => {
+            if (isImported) {
+              // For imported calls, look for "PR1"
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "PR1");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            } else {
+              // For regular calls, look for "PR1:WAITING TIME"
+              const s = servicesUsed.find(s => s.name?.trim().toUpperCase() === "PR1:WAITING TIME");
+              return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+            }
+          })(),
 
           total: totalEarnings ? Number(totalEarnings).toFixed(2) : "0.00",
           date: call.adminEdits.date || call.date || call.createdAt,
@@ -722,9 +742,34 @@ const CallRecorded = () => {
         total: Number(s.total).toFixed(2),
         unitQuantity: Number(s.unitQuantity).toFixed(2),
       })),
-      rem: updatedCall.adminEdits?.servicesUsed?.find(s => s.name?.includes("REMS"))?.unitQuantity || "0.00",
-      rpm: updatedCall.adminEdits?.servicesUsed?.find(s => s.name?.includes("RPM"))?.unitQuantity || "0.00",
-      pr1: updatedCall.adminEdits?.servicesUsed?.find(s => s.name?.includes("PR1"))?.unitQuantity || "0.00",
+      // Update REMS, RPM, PR1 based on import status
+      rem: (() => {
+        if (c.importedFromExcel) {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "REMS");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        } else {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "REMS:KMS ENROUTE");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        }
+      })(),
+      rpm: (() => {
+        if (c.importedFromExcel) {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "RPMS");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        } else {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "RPM:KMS UNDER TOW");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        }
+      })(),
+      pr1: (() => {
+        if (c.importedFromExcel) {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "PR1");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        } else {
+          const s = (updatedCall.adminEdits?.servicesUsed || updatedCall.servicesUsed || []).find(s => s.name?.trim().toUpperCase() === "PR1:WAITING TIME");
+          return s ? Number(s.unitQuantity || 0).toFixed(2) : "0.00";
+        }
+      })(),
     } : c));
   };
 
@@ -1027,24 +1072,30 @@ const CallRecorded = () => {
           <span className="text-gray-900 dark:text-gray-300">{call.call}</span>
         );
       case "services":
-        return (
-          <div className="flex flex-wrap gap-2 max-w-xs">
-            {call.services.map((s, i) => (
-              <span
-                key={i}
-                onClick={() => handleServiceClick(call, s.name)}
-                className="inline-block border dark:text-white border-gray-300 dark:border-gray-600 rounded-full px-3 py-1 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
-              >
-                {s.name}
-              </span>
-            ))}
-          </div>
-        );
+  return (
+    <div className="flex flex-wrap gap-2 max-w-xs">
+      {call.services && call.services.length > 0 ? (
+        call.services.map((s, i) => (
+          <span
+            key={i}
+            onClick={() => handleServiceClick(call, s.name)}
+            className="inline-block border dark:text-white border-gray-300 dark:border-gray-600 rounded-full px-3 py-1 text-xs cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors"
+          >
+            {s.name}
+          </span>
+        ))
+      ) : (
+        <span className="text-gray-400 ps-3 dark:text-gray-500 italic text-sm">
+          -
+        </span>
+      )}
+    </div>
+  );
       case "rem":
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "REMS" : "REMS:KMS ENROUTE")}
           >
             {formatValue(call.rem)}
           </span>
@@ -1053,7 +1104,7 @@ const CallRecorded = () => {
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "RPMS" : "RPM:KMS UNDER TOW")}
           >
             {formatValue(call.rpm)}
           </span>
@@ -1062,7 +1113,7 @@ const CallRecorded = () => {
         return (
           <span
             className="text-gray-500 dark:text-gray-400 cursor-pointer hover:text-blue-600 dark:hover:text-blue-300 font-medium"
-            onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+            onClick={() => handleServiceClick(call, call.importedFromExcel ? "PR1" : "PR1:WAITING TIME")}
           >
             {formatValue(call.pr1)}
           </span>
@@ -1470,28 +1521,34 @@ const CallRecorded = () => {
               <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-3">
                 Call No: {call.call}
               </p>
-              <div className="mb-3">
-                <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-2">
-                  Services
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {call.services.map((s, i) => (
-                    <span
-                      key={i}
-                      className="robotomedium text-[#67778E] dark:text-gray-400 bg-[#67778E0A] dark:bg-gray-800 rounded-full px-3 py-1 text-[12px] cursor-pointer hover:text-blue-600"
-                      onClick={() => handleServiceClick(call, s.name)}
-                    >
-                      {s.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
+             <div className="mb-3">
+  <p className="text-[14px] text-[#555555] dark:text-gray-400 robotomedium mb-2">
+    Services
+  </p>
+  <div className="flex flex-wrap gap-2">
+    {call.services && call.services.length > 0 ? (
+      call.services.map((s, i) => (
+        <span
+          key={i}
+          className="robotomedium text-[#67778E] dark:text-gray-400 bg-[#67778E0A] dark:bg-gray-800 rounded-full px-3 py-1 text-[12px] cursor-pointer hover:text-blue-600"
+          onClick={() => handleServiceClick(call, s.name)}
+        >
+          {s.name}
+        </span>
+      ))
+    ) : (
+      <span className="text-gray-500 dark:text-gray-600 text-[13px] italic">
+        -
+      </span>
+    )}
+  </div>
+</div>
               <div className="grid grid-cols-2 gap-4 mb-3">
                 <div className="flex flex-col items-start">
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">REMS</p>
                   <p
                     className="text-[14px] robotomedium cursor-pointer dark:text-gray-400 hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "REMS:KMS ENROUTE")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "REMS" : "REMS:KMS ENROUTE")}
                   >
                     {formatValue(call.rem)}
                   </p>
@@ -1500,7 +1557,7 @@ const CallRecorded = () => {
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">RPM</p>
                   <p
                     className="text-[14px] robotomedium dark:text-gray-400 cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "RPM:KMS UNDER TOW")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "RPMS" : "RPM:KMS UNDER TOW")}
                   >
                     {formatValue(call.rpm)}
                   </p>
@@ -1509,7 +1566,7 @@ const CallRecorded = () => {
                   <p className="text-[12px] text-[#555555] dark:text-gray-400 robotomedium">PR1</p>
                   <p
                     className="text-[14px] robotomedium dark:text-gray-400 cursor-pointer hover:text-blue-600"
-                    onClick={() => handleServiceClick(call, "PR1:WAITING TIME")}
+                    onClick={() => handleServiceClick(call, call.importedFromExcel ? "PR1" : "PR1:WAITING TIME")}
                   >
                     {formatValue(call.pr1)}
                   </p>
